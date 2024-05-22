@@ -75,12 +75,28 @@ print(myDF2[cd>1,])
 ```
 
 ```{r}
-
 ## CREATE NEW DATASET
 cookDF =myDF2[cd<=1,-8]
 
 ## CREATE NEW LINEAR MODEL
 model2 = lm(price~., data =cookDF)
 summary(model2)
+```
+```{r}
+if (!require(car)) install.packages("car")
+library(car) 
+```
+
+
+```{r}
+## CREATE NEW MODEL WITHOUT 'room_type'
+myDF3 = myDF[,-1]
+
+## BUILD LINEAR MODEL
+model3 = lm(price~., data=myDF3)
+summary(model3)
+
+## RUN VIF
+vif(model3)
 ```
 
