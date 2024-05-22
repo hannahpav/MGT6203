@@ -1,0 +1,86 @@
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Load the data
+airbnb_data = read.csv("../resource/asnlib/publicdata/airbnb_data.csv",header = TRUE)
+
+#  suppress this warning message
+suppressPackageStartupMessages(library(dplyr))
+
+
+# Change headers to lower case (my personal preference for all analysis)
+names(airbnb_data) = tolower(names(airbnb_data))
+
+# Strip to non-ID fields
+removeMe = c("room_id", "survey_id", "host_id", "city")
+#myDF = airbnb_data[, -which(names(airbnb_data) %in% removeMe)]
+myDF=read.csv("clean_data.csv",header = TRUE)
+# Explore the data
+str(myDF)
+summary(myDF)
+
+# Update room type as factor
+myDF$room_type = as.factor(myDF$room_type)
+```
+
+```{r}
+if (!require(tidyverse)) install.packages("tidyverse")
+library(tidyverse) 
+
+```
+
+
+```{r}
+## SET DUMMY VARIABLES WITH "Private room" AT BASE
+myDF2<- myDF %>%
+  mutate(Entire_home = ifelse(room_type=="Entire home/apt",1,0))  %>%
+  mutate(Shared_room = ifelse(room_type=="Shared room",1,0))
+
+## REMOVE 'room_type' VARIABLE
+myDF2 = myDF2[,-1]
+
+## CREATE LINEAR MODEL AND RETURN SUMMARY
+model = lm(price~., data=myDF2)
+summary(model)
+
+
+```
+
+```{r}
+
+newdata = data.frame(bedrooms = 2,
+                     accommodates = 4,
+                     reviews = 50,
+                     overall_satisfaction = 4,
+                     Entire_home = 0,
+                     Shared_room = 0)
+
+predict(model, newdata, interval='prediction')
+```
+
+```{r}
+plot(model, which = 1)
+abline(h = 0.05, col = "red", lty = 2)
+
+```
+```{r}
+## CALCULATE COOKS DISTANCE
+cd = cooks.distance(model)
+myDF2$cooks = cd
+
+## EXTRACT ALL VALUES WHERE CD > 0 AND CREATE NEW DATAFRAME
+print(myDF2[cd>1,])
+
+```
+
+```{r}
+
+## CREATE NEW DATASET
+cookDF =myDF2[cd<=1,-8]
+
+## CREATE NEW LINEAR MODEL
+model2 = lm(price~., data =cookDF)
+summary(model2)
+```
+
