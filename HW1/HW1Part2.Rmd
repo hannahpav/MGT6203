@@ -2,19 +2,19 @@
 library(dplyr)
 library(ggplot2)
 
-# Load the data
-airbnb_data = read.csv("../resource/asnlib/publicdata/airbnb_data.csv",header = TRUE)
-
-#  suppress this warning message
-suppressPackageStartupMessages(library(dplyr))
-
-
-# Change headers to lower case (my personal preference for all analysis)
-names(airbnb_data) = tolower(names(airbnb_data))
-
-# Strip to non-ID fields
-removeMe = c("room_id", "survey_id", "host_id", "city")
-#myDF = airbnb_data[, -which(names(airbnb_data) %in% removeMe)]
+# # Load the data
+# airbnb_data = read.csv("../resource/asnlib/publicdata/airbnb_data.csv",header = TRUE)
+# 
+# #  suppress this warning message
+# suppressPackageStartupMessages(library(dplyr))
+# 
+# 
+# # Change headers to lower case (my personal preference for all analysis)
+# names(airbnb_data) = tolower(names(airbnb_data))
+# 
+# # Strip to non-ID fields
+# removeMe = c("room_id", "survey_id", "host_id", "city")
+# #myDF = airbnb_data[, -which(names(airbnb_data) %in% removeMe)]
 myDF=read.csv("clean_data.csv",header = TRUE)
 # Explore the data
 str(myDF)
@@ -87,6 +87,8 @@ if (!require(car)) install.packages("car")
 library(car) 
 ```
 
+## 1E. Variance Inflation Factor (VIF) Function (3 points):
+
 
 ```{r}
 ## CREATE NEW MODEL WITHOUT 'room_type'
@@ -98,5 +100,34 @@ summary(model3)
 
 ## RUN VIF
 vif(model3)
+```
+
+## 1F. Linear/Log Regression (6 points):¶
+
+```{r}
+
+## linear-linear
+modelLinLin = lm(price~ reviews, data = myDF)
+summary(modelLinLin)
+
+## linear-log
+modelLinLog = lm(price~ log(reviews+1), data = myDF)
+summary(modelLinLog)
+
+## log-linear
+modelLogLin = lm(log(price)~ reviews, data = myDF)
+summary(modelLogLin)
+
+## log-log
+modelLogLog = lm(log(price)~ log(reviews+1), data = myDF)
+summary(modelLogLog)
+
+```
+
+```{r}
+
+data.frame(model = c('linear-linear', 'linear-log', 'log-linear', 'log-log'), adj.r.squared =c(summary(modelLinLin)$adj.r.squared, summary(modelLinLog)$adj.r.squared,
+                                                                                               summary(modelLogLin)$adj.r.squared, summary(modelLogLog)$adj.r.squared) )
+
 ```
 
