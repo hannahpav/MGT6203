@@ -131,3 +131,119 @@ data.frame(model = c('linear-linear', 'linear-log', 'log-linear', 'log-log'), ad
 
 ```
 
+# 2
+```{r}
+# Read in the dataframe
+mydm <- read.csv("direct_marketing.csv", header = TRUE)
+
+# Change headers to lower case (my personal preference for all analysis)
+names(mydm) = tolower(names(mydm))
+
+# create columns per question parameters
+mydm2 <- mydm %>%
+    mutate(low = ifelse(history == "Low", 1,0)) %>%
+    mutate(medium = ifelse(history == "Medium", 1,0)) %>%
+    mutate(high = ifelse(history == "High", 1,0)) %>%
+    mutate(lowsalary = salary * low) %>%
+    mutate(mediumsalary = salary * medium) %>%
+    mutate(highsalary = salary * high)
+
+summary(mydm2)
+```
+
+
+## 2A Fitting a Multiple Linear Regression Model (6 points):
+
+```{r}
+
+dmmodel1 <- lm(amountspent ~ age + ownhome + salary + low + medium + high + lowsalary + mediumsalary + highsalary, data=mydm2)
+summary(dmmodel1)
+```
+
+## 2B. Making a Prediction (6 points):
+
+```{r}
+dmnewdata_none = data.frame(age = 'Middle',
+                     ownhome = 'Rent',
+                     salary = 75000,
+                     low = 0,
+                     medium = 0,
+                     high = 0,
+                     lowsalary = 0,
+                     mediumsalary = 0,
+                     highsalary = 0)
+
+dmnewdata_low = data.frame(age = 'Middle',
+                     ownhome = 'Rent',
+                     salary = 75000,
+                     low = 1,
+                     medium = 0,
+                     high = 0,
+                     lowsalary = 75000,
+                     mediumsalary = 0,
+                     highsalary = 0)
+
+dmnewdata_medium = data.frame(age = 'Middle',
+                     ownhome = 'Rent',
+                     salary = 75000,
+                     low = 0,
+                     medium = 1,
+                     high = 0,
+                     lowsalary = 0,
+                     mediumsalary = 75000,
+                     highsalary = 0)
+
+dmnewdata_high = data.frame(age = 'Middle',
+                     ownhome = 'Rent',
+                     salary = 75000,
+                     low = 0,
+                     medium = 0,
+                     high = 1,
+                     lowsalary = 0,
+                     mediumsalary = 0,
+                     highsalary = 75000 )
+
+models = list(dmnewdata_none, dmnewdata_low, dmnewdata_medium, dmnewdata_high)
+
+pred_list = list()
+
+for(model_test in models){
+  dmpred = predict(dmmodel1, model_test)
+  pred_list = append(pred_list, round(dmpred[[1]]))
+}
+
+data.frame(model=c('None', 'low', 'medium','high'), prediction = unlist(pred_list))
+```
+
+# Q3 Titanic Survival (16 points total)
+
+
+```{r}
+# Load library if needed
+if (!require(car)) install.packages("car")
+library(car)
+
+# Load the data
+data("TitanicSurvival")
+
+# Change headers to lower case (my personal preference for all analysis)
+names(TitanicSurvival) = tolower(names(TitanicSurvival))
+
+# Update the survived values to 1 for yes and 0 for no.  
+TitanicSurvival$survived = 
+  ifelse(TitanicSurvival$survived == "yes",1,0)
+
+# Explore the data
+str(TitanicSurvival)
+summary(TitanicSurvival)
+```
+
+##3A. Logistic Regression on Titanic (3 points):
+
+```{r}
+
+Tmodel = glm(survived ~ sex, data=TitanicSurvival, family = 'binomial')
+summary(Tmodel)
+
+```
+
