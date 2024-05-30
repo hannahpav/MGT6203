@@ -29,6 +29,7 @@ if (!require(tidyverse)) install.packages("tidyverse")
 library(tidyverse) 
 
 ```
+#1A. Fit a multiple linear regression model, and report variables that are statistically significant at the alpha level of 0.01. (6 points)¶
 
 
 ```{r}
@@ -64,6 +65,8 @@ plot(model, which = 1)
 abline(h = 0.05, col = "red", lty = 2)
 
 ```
+
+
 ```{r}
 ## CALCULATE COOKS DISTANCE
 cd = cooks.distance(model)
@@ -82,6 +85,8 @@ cookDF =myDF2[cd<=1,-8]
 model2 = lm(price~., data =cookDF)
 summary(model2)
 ```
+
+
 ```{r}
 if (!require(car)) install.packages("car")
 library(car) 
@@ -261,7 +266,9 @@ This means the odds of survival for females are 2.669 times higher than the odds
 Note: Round to three decimals. Example, XX.xxx
 
 ```{r}
+## find log odds
 lom = Tmodel$coefficients[[1]] + Tmodel$coefficients[[2]]
+## find probability
 prob = 1/(1+exp(-lom))
 round(prob,3)
 ```
@@ -278,6 +285,33 @@ Using this model, calculate the probability of survival for the passengers in al
 Note: Round to three decimals. Example, XX.xxx </ul>
 
 ```{r}
+## SET DUMMY VARIABLES WITH "3rd class" AT BASE for passengerclass
+TitanicSurvival2<- TitanicSurvival %>%
+  mutate(pclass1st = ifelse(passengerclass=="1st",1,0))  %>%
+  mutate(pclass2nd = ifelse(passengerclass=="2nd",1,0))
+
+## REMOVE 'passengerclass' VARIABLE
+TitanicSurvival2 = TitanicSurvival2[,-4]
+
+## CREATE LOGISTIC MODEL
+Tmodel2 = glm(survived ~ pclass1st+pclass2nd, data=TitanicSurvival2, family = 'binomial')
+summary(Tmodel2)
+
+```
+```{r}
+## Psurvival(1st)
+lo1st = Tmodel2$coefficients[[1]] + Tmodel2$coefficients[[2]]
+prob1st = round(1/(1+exp(-lo1st)),3)
+
+## Psurvival(2nd)
+lo2nd = Tmodel2$coefficients[[1]] + Tmodel2$coefficients[[3]]
+prob2nd = round(1/(1+exp(-lo2nd)),3)
+
+## Psurvival(3rd)
+lo3rd = Tmodel2$coefficients[[1]]
+prob3rd = round(1/(1+exp(-lo3rd)),3)
+
+paste0('survival 1st class = ', prob1st, '; survival 2nd class = ', prob2nd, '; survival 3rd class = ', prob3rd)
 
 ```
 
