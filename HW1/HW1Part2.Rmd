@@ -246,4 +246,38 @@ Tmodel = glm(survived ~ sex, data=TitanicSurvival, family = 'binomial')
 summary(Tmodel)
 
 ```
+the value of the intercept tells us that when sexmale=0, or when the sex is female, log odds of survival for a female is 0.9818.
+
+## 3B. Determine the odds of survival for females (3 points):¶
+
+
+```{r}
+round(exp(0.9818),3)
+```
+
+This means the odds of survival for females are 2.669 times higher than the odds of not surviving.
+
+##3C. Determine the probability of survival for males (3 points):¶
+Note: Round to three decimals. Example, XX.xxx
+
+```{r}
+lom = Tmodel$coefficients[[1]] + Tmodel$coefficients[[2]]
+prob = 1/(1+exp(-lom))
+round(prob,3)
+```
+
+The probability of survival for a male passenger is 0.191
+
+#3D. Logistic Regression Indicator Variables (7 points):
+Create indicator variables for the variable, **`passengerclass`**.
+Treat **`passengerclass`**= "3rd" as the base case.
+Therefore, `first_class` = 1 if `passengerclass` is "1st" or else 0.
+`second_class` = 1 if `passengerclass` is "2nd" or else 0.
+Create a logistic regression model with the variable, survived, as the response variable and the indicator variables created for passengerclass as the independent model variables.
+Using this model, calculate the probability of survival for the passengers in all 3 classes.
+Note: Round to three decimals. Example, XX.xxx </ul>
+
+```{r}
+
+```
 
