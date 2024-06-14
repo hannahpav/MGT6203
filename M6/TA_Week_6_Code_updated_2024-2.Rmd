@@ -1,0 +1,430 @@
+---
+title: "RiskandReturn_Week6_Advanced"
+author: "DJ" 
+date: "25/02/2021"
+modified: "28/09/2022 by F.Bien and 2/12/2024 by J.Fan"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+#Installing packages as needed
+
+#NOTE: This statement essentially checks if PerformanceAnalytics package is available
+#locally in your R library distribution. If not, it will install it and then include it
+#as a part of this code, so that we can use its functions and features
+
+```{r}
+if (!require(tidyverse)) install.packages("tidyverse")
+if (!require(tidyquant)) install.packages("tidyquant")
+if (!require(PerformanceAnalytics)) install.packages("PerformanceAnalytics")
+if (!require(xts)) install.packages("xts")
+if (!require(lubridate)) install.packages("lubridate")
+if (!require(Quandl)) install.packages("Quandl")
+if (!require(riingo)) install.packages("riingo")
+```
+
+#Package Details
+
+#1) Tidyverse: The tidyverse is an opinionated collection of R packages designed for data science. All packages share an underlying design philosophy, grammar, and data structures: https://www.tidyverse.org/
+
+#2)Tidyquant: The 'tidyquant' package provides a convenient wrapper to various 'xts', 'zoo', 'quantmod' and 'TTR' package functions and returns the objects in the tidy 'tibble' format. The main advantage is being able to use quantitative functions with the 'tidyverse' functions including 'purrr', 'dplyr', 'tidyr', 'ggplot2', 'lubridate', etc: https://www.rdocumentation.org/packages/tidyquant/versions/0.3.0
+
+#3)Performanceanalytics: A very useful package for investment and financial performance and risk 
+#analytics. Official Documentation: https://www.rdocumentation.org/packages/PerformanceAnalytics/versions/1.5.3
+#Presentation Deck by Package Founders: http://past.rinfinance.com/RinFinance2009/presentations/PA%20Workshop%20Chi%20RFinance%202009-04.pdf
+#Quick Video on calculating returns: https://www.youtube.com/watch?v=0rAVPUNf9yI
+
+#4) xts: xts is a useful packge useful in time-series analysis. We use xts package here since
+#PerformanceAnalytics functions usually require xts objects (time-series of prices etc.) rather than simple
+#lists of prices for more accurate performance evaluation
+
+#5) lubridate: lubridate is a date manipulation package. We use mdy() function of lubridate to standardize dates of our data 
+#Useful Resource: https://raw.githubusercontent.com/rstudio/cheatsheets/master/lubridate.pdf
+
+#6) Quandl: Get millions of financial and economic datasets from hundreds of publishers directly into R. (https://www.quandl.com/tools/r)
+
+#7) An R Interface to the 'Tiingo' Stock Price API: https://cran.r-project.org/web/packages/riingo/riingo.pdf
+#Riingo allows you to access the Tiingo API for stock prices, cryptocurrencies, and intraday feeds from the IEX (Investors Exchange). This can serve as an alternate source of data to Yahoo Finance.Look for instructions at https://business-science.github.io/riingo/
+
+
+```{r}
+library(tidyverse)
+library(tidyquant)
+library(PerformanceAnalytics)
+library(xts)
+library(lubridate)
+library(Quandl)
+library(riingo)
+
+# The riingo package in R is designed to interface with the Tiingo financial data API, providing users with access to a vast array of financial data including stock prices, ETF data, and more. Tiingo is a financial data platform that aims to provide affordable and high-quality financial data to both individuals and professionals. The riingo package makes it easy for R users to fetch this data directly into their R environment for analysis, visualization, and further financial modeling.
+```
+
+Examples of packages we can use to download stock data using API
+
+#1 Riingo
+```{r}
+# Need to sign up for a free api key at https://api.tiingo.com/
+# api_key <-  config::get("tiingo", file = "config.yml")
+# Then copy your own token from https://api.tiingo.com/account/api/token
+
+# Else you can use this token (from one of our TAs, but it might stop working at some point)
+api_key <-  "224f4bd36f0875f94c4cb328cba5f1716d4aad64"
+
+# Need to set the key so this R session can pass it to the Tiingo API
+riingo_set_token(api_key)
+
+# These are our tickers of interest
+tickers <- c(
+"SPY",
+"EFA",
+"IJS",
+"EEM",
+"AGG",
+"TLT",
+"VNQ")
+
+tickers <- "SPY"
+
+#The tickers listed are symbols for widely traded Exchange-Traded Funds (ETFs) on the U.S. stock market, each representing different sectors, asset classes, or investment strategies. Here's a brief overview of what each ticker represents:
+
+#SPY: SPDR S&P 500 ETF Trust - This ETF tracks the S&P 500 Index, which comprises 500 of the largest U.S. companies, making it a popular choice for investors looking to gain exposure to the overall U.S. stock market.
+
+# Now we can use the `riingo_prices()` function from the `riingo` package. Can look at docs for riingo package to see what the function returns.
+
+prices_volume_via_api_2020 <- 
+  tickers %>% 
+  riingo_prices(start_date = "2020-01-01", end_date = Sys.Date()) %>% 
+  select(ticker, date, close, volume) %>% 
+  mutate(date = ymd(date))
+
+#?riingo_prices()
+
+prices_volume_via_api_2020 %>% head(10)
+```
+
+#2 Tidyquant
+
+```{r}
+prices_volume_via_tq_2020 <- 
+  tickers %>% 
+  tq_get(get = "tiingo", from = "2020-01-01") %>% 
+  select(date,ticker = symbol, close, volume) %>%
+  mutate(date = as.Date(date))
+
+prices_volume_via_api_2020 %>% 
+  head()
+```
+#A previous version of this file used get = "stock.prices". This method of pulling market data no longer works. It was used to pull market data from Yahoo! Finance. Tidyquant is no longer allowed to pull market data for free from Yahoo! Finance. Instead we can use the method get = "tiingo". The Tiingo platform allows Tidyquant to get market data for free. See https://cran.r-project.org/web/packages/tidyquant/vignettes/TQ01-core-functions-in-tidyquant.html#yahoo-finance and  https://cran.r-project.org/web/packages/tidyquant/vignettes/TQ01-core-functions-in-tidyquant.html#tiingo-api
+
+#3 Quandl
+
+```{r}
+Quandl.api_key("9aKMYc6XUnLgxw4hS1kM")
+
+#market <- Quandl("BCIW/_INX", start_date="2010-01-01", end_date="2023-01-01")
+market <- Quandl("FRED/GDP", start_date="2010-01-01", end_date=Sys.Date()) # Database/dataset
+market %>%head()
+
+Quandl.datatable("ZACKS/FC",ticker="AAPL")%>%head()
+
+# The line retrieves data for the "FRED/GDP" dataset from Quandl, which corresponds to Gross Domestic Product (GDP) data provided by the Federal Reserve Economic Data (FRED). The data is fetched for the period from January 1, 2010, up to the current date (Sys.Date() returns today's date in R). The retrieved data is assigned to the variable market.
+
+
+#This line uses the Quandl.datatable function to request data from the "ZACKS/FC" datatable for a specific ticker, in this case, "AAPL" (Apple Inc.). The ZACKS/FC code refers to a dataset provided by Zacks Investment Research, focusing on financial fundamentals of companies. 
+```
+
+#Financial asset (individual stocks, securities, etc) and portfolio (groups of stocks, securities, etc) performance analysis is a deep field with a wide range of theories and methods for analyzing risk versus reward. The PerformanceAnalytics package consolidates functions to compute many of the most widely used performance metrics. tidquant integrates this functionality so it can be used at scale using the split, apply, combine framework within the tidyverse. Two primary functions integrate the performance analysis functionality:
+
+##tq_performance implements the performance analysis functions in a tidy way, enabling scaling analysis using the split, apply, combine framework.
+##tq_portfolio provides a useful tool set for aggregating a group of individual asset returns into one or many portfolios.
+
+#An important concept is that performance analysis is based on the statistical properties of returns (not prices). As a result, this package uses inputs of time-based returns as opposed to stock prices. The arguments change to Ra for the asset returns and Rb for the baseline returns. We’ll go over how to get returns in the Workflow section.
+
+#Another important concept is the baseline. The baseline is what you are measuring performance against. A baseline can be anything, but in many cases it’s a representative average of how an investment might perform with little or no effort. Often indexes such as the S&P500 are used for general market performance. Other times more specific Exchange Traded Funds (ETFs) are used such as the SPDR Technology ETF (XLK). The important concept here is that you measure the asset performance (Ra) against the baseline (Rb).
+
+
+# Getting the Asset Period Returns
+# Use tq_get() to get stock prices.
+```{r}
+stock_prices <- c("AAPL", "GOOG", "NFLX") %>%
+    tq_get(get  = "tiingo",
+           from = "2010-01-01",
+           to   = Sys.Date())
+
+stock_prices%>%filter(symbol=="AAPL")%>%head()
+
+stock_prices%>%filter(symbol=="GOOG")%>%head()
+
+stock_prices%>%filter(symbol=="NFLX")%>%head()
+
+#The tq_get() function used in your R code comes from the tidyquant library. The tidyquant package is designed to integrate quantitative financial analysis tools into the tidyverse workflow, allowing for an efficient and straightforward way to handle financial data in R. It offers functions to access financial data from various sources, perform financial calculations, and visualize financial time series data.
+```
+
+
+
+# Using the tidyverse split, apply, combine framework, we can mutate groups of stocks by first “grouping” with group_by and then applying a mutating function using tq_transmute. We use the quantmod function periodReturn as the mutating function. We pass along the arguments period = "monthly" to return the results in monthly periodicity. Last, we use the col_rename argument to rename the output column.
+
+```{r}
+stock_returns_monthly <- stock_prices %>%
+    group_by(symbol) %>%
+    tq_transmute(select     = adjusted, 
+                 mutate_fun = periodReturn, 
+                 period     = "monthly", 
+                 col_rename = "Ra")
+
+stock_returns_monthly%>%head()
+
+#  mutate_fun = periodReturn, the code is directed to calculate the returns for each asset (grouped by symbol) for the period specified by the period argument (in this case, "monthly"). This allows the analyst to evaluate how each stock has performed month-over-month.
+```
+
+# Getting SPDR Technology ETF i.e.XLK (Baseline for Market) Returns 
+```{r}
+baseline_returns_monthly <- "XLK" %>%
+    tq_get(get  = "tiingo",
+           from = "2010-01-01",
+           to   = Sys.Date()) %>%
+    tq_transmute(select     = adjusted, 
+                 mutate_fun = periodReturn, 
+                 period     = "monthly", 
+                 col_rename = "Rb")
+
+baseline_returns_monthly%>%head()
+```
+
+#The tidyquant function, tq_portfolio() aggregates a group of individual assets into a single return using a weighted composition of the underlying assets. To do this we need to first develop portfolio weights. We supplying a vector of weights and form the portfolio.
+
+```{r}
+wts <- c(0.4, 0.3, 0.3)
+
+portfolio_returns_monthly <- stock_returns_monthly %>%
+    tq_portfolio(assets_col  = symbol, 
+                 returns_col = Ra, 
+                 weights     = wts, 
+                 col_rename  = "Ra")
+
+portfolio_returns_monthly%>%head() 
+```
+
+# Now that we have the aggregated portfolio returns (“Ra”) and the baseline returns (“Rb”), we can merge to get our consolidated table of asset and baseline returns. Nothing new here.
+
+
+ mutate_fun = periodReturn, the code is directed to calculate the returns for each asset (grouped by symbol) for the period specified by the period argument (in this case, "monthly"). This allows the analyst to evaluate how each stock has performed month-over-month.
+ 
+ 
+```{r}
+RaRb_single_portfolio <- left_join(portfolio_returns_monthly, 
+                                   baseline_returns_monthly,
+                                   by = "date")
+
+RaRb_single_portfolio%>%head()
+```
+
+# Let's simplify these financial concepts:
+
+# r_i  is the return of an individual stock.
+# r_m  is the return on a broad market index, like the S&P 500, which serves as a proxy for market return
+# Alpha 
+
+ 
+
+   (alpha) represents the intercept which is used to describe an investment strategy's ability to beat the benchmark, or it's "edge“ i.e. often referred to as “excess return” or “abnormal rate of return.
+
+   
+  What It Is: Think of alpha as the extra score an investment earns over what you'd expect, kind of like bonus points. If your investment is doing better than everyone thought it would, compared to a common benchmark (like the S&P 500), that extra performance is called alpha.
+
+  Friendly Note: Positive alpha = You're winning more than expected! Negative alpha = Hmm, not doing as well as we hoped.
+  
+
+#Beta
+
+(beta) is the measure of the stock's sensitivity to market movements. If β is greater than 1, the stock is considered more volatile than the market; if it is less than 1, it's less volatile.
+
+
+What It Is: Beta measures how wild or tame your investment is compared to the market. If the market is a rollercoaster, beta tells you if your investment is more like a wild ride, a kiddie ride, or somewhere in between.
+
+Friendly Note:
+
+ 1.Beta of 1: Your investment is riding the rollercoaster with the market.
+
+ 2.Beta less than 1: It's more like a calm kiddie ride, less ups and downs.
+  
+ 3.Beta more than 1: Hold tight! Your investment is more like an extreme rollercoaster.
+ 
+ 
+# (R-squared) statistic, which is a measure of the goodness of fit for the regression model. It represents the percentage of the stock's return that can be explained by its relationship to the market. 
+  
+ R-squared  indicates that a larger portion of the stock's movements can be explained by the movements of the market index, implying a closer correlation with the market.
+
+ 
+
+#Annualized Alpha (Good to know)
+
+What It Is: This is just alpha turned into an annual report card. It tells you how much extra (or less) your investment made on average each year.
+Friendly Note: It's like looking at your yearly report card to see how well you did, on average, every year.
+
+
+
+
+# Computing the CAPM Table
+# The CAPM table is computed with the function table.CAPM from PerformanceAnalytics.
+
+```{r}
+RaRb_single_portfolio %>%
+    tq_performance(Ra = Ra, Rb = Rb, performance_fun = table.CAPM) %>%
+         select(Alpha, AnnualizedAlpha, Beta, Correlation, 'R-squared')
+```
+
+# First, we need to grow our portfolios. tidyquant has a handy, albeit simple, function, tq_repeat_df(), for scaling a single portfolio to many. It takes a data frame, and the number of repeats, n, and the index_col_name, which adds a sequential index. Let’s see how it works for our example. We need three portfolios:
+
+```{r}
+stock_returns_monthly_multi <- stock_returns_monthly %>%
+    tq_repeat_df(n = 3)
+stock_returns_monthly_multi%>%head()
+```
+
+#Examining the results, we can see that a few things happened:
+
+##The length (number of rows) has tripled. This is the essence of tq_repeat_df: it grows the data frame length-wise, repeating the data frame n times. In our case, n = 3.
+##Our data frame, which was grouped by symbol, was ungrouped. This is needed to prevent tq_portfolio from blending on the individual stocks. tq_portfolio only works on groups of stocks.
+##We have a new column, named “portfolio”. The “portfolio” column name is a key that tells tq_portfolio that multiple groups exist to analyze. Just note that for multiple portfolio analysis, the “portfolio” column name is required.
+##We have three groups of portfolios. This is what tq_portfolio will split, apply (aggregate), then combine on.
+
+#Now the tricky part: We need a new table of weights to map on. There’s a few requirements:
+
+##We must supply a three column tibble with the following columns: “portfolio”, asset, and weight in that order.
+##The “portfolio” column must be named “portfolio” since this is a key name for mapping.
+##The tibble must be grouped by the portfolio column.
+
+#Here’s what the weights table should look like:
+
+```{r}
+weights <- c(
+    0.50, 0.25, 0.25,
+    0.25, 0.50, 0.25,
+    0.25, 0.25, 0.50
+)
+stocks <- c("AAPL", "GOOG", "NFLX")
+weights_table <-  tibble(stocks) %>%
+    tq_repeat_df(n = 3) %>%
+    bind_cols(tibble(weights)) %>%
+    group_by(portfolio)
+
+weights_table
+```
+
+# Now just pass the the expanded stock_returns_monthly_multi and the weights_table to tq_portfolio for portfolio aggregation.
+
+```{r}
+portfolio_returns_monthly_multi <- stock_returns_monthly_multi %>%
+    tq_portfolio(assets_col  = symbol, 
+                 returns_col = Ra, 
+                 weights     = weights_table, 
+                 col_rename  = "Ra")
+
+portfolio_returns_monthly_multi%>%head()
+
+```
+
+#we merge with the baseline using “date” as the key.
+```{r}
+RaRb_multiple_portfolio <- left_join(portfolio_returns_monthly_multi, 
+                                     baseline_returns_monthly,
+                                     by = "date")
+
+portfolio_returns_monthly_multi%>%head()
+
+```
+
+```{r}
+RaRb_multiple_portfolio %>%
+    tq_performance(Ra = Ra, Rb = Rb, performance_fun = table.CAPM) %>%
+  select(Alpha, AnnualizedAlpha, Beta, Correlation, 'R-squared')
+```
+
+# Let’s see an example of passing parameters. Suppose we want to instead see how our money is grows for a $1,000 investment. We’ll use the “Single Portfolio” example, where our portfolio mix was 40% AAPL, 30% GOOG, and 30% NFLX.
+
+```{r}
+wts <- c(0.4, 0.3, 0.3)
+portfolio_returns_monthly <- stock_returns_monthly %>%
+    tq_portfolio(assets_col  = symbol, 
+                 returns_col = Ra, 
+                 weights     = wts, 
+                 col_rename  = "Ra")
+
+portfolio_returns_monthly %>%head() 
+```
+
+```{r}
+portfolio_returns_monthly %>%
+    ggplot(aes(x = date, y = Ra)) +
+    geom_bar(stat = "identity", fill = palette_light()[[1]]) +
+    labs(title = "Portfolio Returns",
+         subtitle = "40% AAPL, 30% GOOG, and 30% NFLX",
+         caption = "Shows an above-zero trend meaning positive returns",
+         x = "", y = "Monthly Returns") +
+    geom_smooth(method = "lm") +
+    theme_tq() +
+    scale_color_tq() +
+    scale_y_continuous(labels = scales::percent)
+```
+
+# This is good, but we want to see how our $10,000 initial investment is growing. This is simple with the underlying Return.portfolio argument, wealth.index = TRUE. All we need to do is add these as additional parameters to tq_portfolio!
+
+```{r}
+wts <- c(0.4, 0.3, 0.3)
+portfolio_growth_monthly <- stock_returns_monthly %>%
+    tq_portfolio(assets_col   = symbol, 
+                 returns_col  = Ra, 
+                 weights      = wts, 
+                 col_rename   = "investment.growth",
+                 wealth.index = TRUE) %>%
+    mutate(investment.growth = investment.growth * 1000)
+```
+
+```{r}
+portfolio_growth_monthly %>%
+    ggplot(aes(x = date, y = investment.growth)) +
+    geom_line(size = 2, color = palette_light()[[1]]) +
+    labs(title = "Portfolio Growth",
+         subtitle = "40% AAPL, 30% GOOG, and 30% NFLX",
+         caption = "Now we can really visualize performance!",
+         x = "", y = "Portfolio Value") +
+    geom_smooth(method = "loess") +
+    theme_tq() +
+    scale_color_tq() +
+    scale_y_continuous(labels = scales::dollar)
+```
+
+#Finally, taking this one step further, we apply the same process to the “Multiple Portfolio” example:
+
+##50% AAPL, 25% GOOG, 25% NFLX
+##25% AAPL, 50% GOOG, 25% NFLX
+##25% AAPL, 25% GOOG, 50% NFLX
+
+```{r}
+portfolio_growth_monthly_multi <- stock_returns_monthly_multi %>%
+    tq_portfolio(assets_col   = symbol, 
+                 returns_col  = Ra, 
+                 weights      = weights_table, 
+                 col_rename   = "investment.growth",
+                 wealth.index = TRUE) %>%
+    mutate(investment.growth = investment.growth * 1000)
+```
+
+```{r}
+portfolio_growth_monthly_multi %>%
+    ggplot(aes(x = date, y = investment.growth, color = factor(portfolio))) +
+    geom_line(size = 2) +
+    labs(title = "Portfolio Growth",
+         subtitle = "Comparing Multiple Portfolios",
+         caption = "Portfolio 3 is a Standout!",
+         x = "", y = "Portfolio Value",
+         color = "Portfolio") +
+    geom_smooth(method = "loess") +
+    theme_tq() +
+    scale_color_tq() +
+    scale_y_continuous(labels = scales::dollar)
+```

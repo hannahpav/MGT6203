@@ -1,0 +1,162 @@
+---
+title: "Module 2 - Risk-Adjusted Performance"
+author: "Frederic Bien"
+date: "September 8, 2021"
+based on code by: "Srikar Polasanapalli"
+output: word_document
+---
+
+```{r}
+
+### Install 3 Finance packages:
+library(PerformanceAnalytics)
+library(xts)
+library(lubridate)
+
+# Set your directory where your datafile is
+getwd()
+# if needed, use setwd("[input your directory name]")
+
+# Load the data provided (for the Contrafund, a Fidelity mutual fund) and create an xts dataset
+fund <- read.csv("contrafund.csv")
+View(fund)
+
+# Change the date variable from character type to date type
+fund$Date <- mdy(fund$Date)
+View(fund)
+
+# Check that the date column is ordered properly. 
+# (Better be safe to compute monthly returns.)
+fund2 <- fund[order(fund$Date),]
+
+# Create an xts dataset (extended time-series with date as the index)
+fund3 <- xts(fund2[,-1], order.by=fund2[,1],)
+
+# Compute the cumulative return for the 38 and a half years Jan 1980 to June 2018
+Return.cumulative(fund3, geometric =TRUE)
+
+# Let's visualize returns. Charts will appear BELOW in this window
+# and NOT in the usual Plot window at bottom right of RStudio. This is because we're using the R Markdown format.
+
+# Chart the cumulative returns of Contrafund
+chart.CumReturns(fund3$ContraRet,wealth.index = FALSE, geometric = TRUE)
+
+# Chart the cumulative returns of Contrafund, the market and risk free rate in one chart
+chart.CumReturns(fund3, wealth.index = FALSE, geometric = TRUE)
+
+# Compute the Sharpe Ratio of the Contrafund
+SharpeRatio(fund3$ContraRet, fund3$Risk.Free)
+# Answer: StdDev Sharpe = 0.19 = 19%
+
+# Compute the Treynor Ratio of the Contrafund
+TreynorRatio(fund3$ContraRet, fund3$Market.Return, fund3$Risk.Free)
+# Answer: Treynor Ratio = 0.1 = 10%
+
+fund4 <- transform(fund3, FundExcess = ContraRet-Risk.Free, MktExcess = Market.Return-Risk.Free)
+View(fund4)
+
+basicmodel = lm(ContraRet.1 ~ Market.Return.1, data=fund4)
+summary(basicmodel)
+
+# Observe the value of the intercept: this is Jensen's Alpha
+# Answer: Jensen's Alpha = 0.002 = 0.2%
+
+# Notice the value of the regression coefficient of Market.Return: this is Beta of the Contrafund
+# Answer: Beta of Contrafund = 0.90
+
+# To understand better, let's compute the Sharpe Ratio sort of 'by hand'
+### Insert code to compute Sharpe Ratio by hand ###
+# We would need Std dev of portfolio returns and mean excess return
+mean(fund4$ContraRet-fund4$Risk.Free)
+sd(fund4$ContraRet)
+mean(fund4$ContraRet.1)
+sd(fund4$ContraRet.1)
+
+
+sharpe_by_hand = mean(fund4$ContraRet-fund4$Risk.Free)/sd(fund4$ContraRet)
+sharpe_by_hand
+sharpe_by_hand1 = mean(fund4$ContraRet.1)/sd(fund4$ContraRet.1)
+sharpe_by_hand1
+
+sharpe_by_formula = SharpeRatio(fund4$ContraRet, fund4$Risk.Free, FUN = "StdDev")
+sharpe_by_formula[1]
+
+# Please note the differences. The true Sharpe Ratio uses the Standard Deviation of the Excess Returns, not just the fund returns. 
+
+```
+
+Standard dev of excess returns is 
+sd(fund4$ContraRet.1)
+= 0.04335031
+
+sharpe_by_hand = mean(fund4$ContraRet-fund4$Risk.Free)/sd(fund4$ContraRet)
+sharpe_by_hand
+= 0.1901068
+ 
+This is the same value as computed by the R function
+sharpe_by_formula = SharpeRatio(fund4$ContraRet, fund4$Risk.Free, FUN = "StdDev")
+sharpe_by_formula[1]
+ 
+However, the true definition of Sharpe Ratio is
+(Expected Excess Return) divided by (Standard Dev of Excess Returns)
+See https://web.stanford.edu/~wfsharpe/art/sr/sr.htm 
+and https://en.wikipedia.org/wiki/Sharpe_ratio
+In Sharpe's own paper of 1992, he says to use the Excel function:
+AVERAGE(C1:C60)/STDEV(C1:C60)
+Where C is the column of "differential returns", that is 'excess returns'.
+ 
+So defining
+sharpe_by_hand1 = mean(fund4$ContraRet.1)/sd(fund4$ContraRet.1)
+sharpe_by_hand1
+
+= 0.1895916
+This is slightly lower than the value found above: 0.1901068
+ 
+
+0.1895916 is the correct value for the Sharpe Ratio, but 0.1901068 is also an accepted value for the Sharpe Ratio. The industry accepts both answers.
+
+```{r}
+# Note that we do NOT use the Cumulative Return for fund4$ContraRet.1
+# We only use the mean (or expected value) of the excess returns
+
+# Annual Sharpe Ratio
+sharpe_by_hand_annual = mean(fund4$ContraRet-fund4$Risk.Free)*sqrt(12)/sd(fund4$ContraRet)
+sharpe_by_hand_annual
+sharpe_by_formula_annual = SharpeRatio.annualized(fund4$ContraRet, fund4$Risk.Free,geometric = F)
+sharpe_by_formula_annual[1]
+
+
+### Insert code to compute the Treynor Ratio by hand ###
+beta = summary(basicmodel)$coef["Market.Return.1","Estimate"]
+treynor_by_hand_annual = 12*mean(fund4$ContraRet.1)/beta
+treynor_by_hand_annual
+TreynorRatio(fund4$ContraRet, fund4$Market.Return,fund4$Risk.Free)
+```
+
+```{r}
+
+#Approach #2
+library(PerformanceAnalytics)
+library(xts)
+library(lubridate)
+# load data and create an xts dataset
+fund<-read.csv("contrafund.csv")
+fund$Date<-mdy(fund$Date)
+fund2<-fund[order(fund$Date),]
+#create an xts dataset
+All.dat<-xts(fund2[,-1],order.by=fund2[,1],)
+
+Return.cumulative(All.dat, geometric =TRUE)
+chart.CumReturns(All.dat, wealth.index =FALSE, geometric = TRUE)
+
+SharpeRatio(All.dat$ContraRet,All.dat$Risk.Free)
+TreynorRatio(All.dat$ContraRet,All.dat$Market.Return,All.dat$Risk.Free)
+
+All.dat<-transform(All.dat,MktExcess=Market.Return-Risk.Free,FundExcess=ContraRet-Risk.Free)
+
+Alpha=lm(FundExcess~MktExcess,data=All.dat)
+summary(Alpha)
+
+
+```
+

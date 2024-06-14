@@ -1,0 +1,274 @@
+#Question 1
+
+## 1A. Classify the sales into four groups (6 Points)¶
+
+A. Monthly sales for TechPad product before major software update was implemented, Control0
+B. Monthly sales for ElectroTab product before major software update was implemented, Treatment0
+C. Monthly sales for TechPad product after major software update was implemented. There was no update for TechPad, Control1
+D. ElectroTab product after major software update was implemented on this product, Treatment1
+
+## 1B. Calculate the mean of the 'sales_volume' variable for each of the four groups. (6 Points)¶
+
+```{r}
+# Read the dataset
+product_sales = read.csv("product_sales.csv")
+
+# Load library
+library(dplyr)
+str(product_sales)
+```
+
+## 1B. Calculate the mean of the 'sales_volume' variable for each of the four groups. (6 Points)¶
+
+```{r}
+a = sapply(subset(product_sales, product == "TechPad" & post_update == 0, select=sales_volume), mean)
+b = sapply(subset(product_sales, product  == "ElectroTab" & post_update== 0, select=sales_volume), mean)
+c = sapply(subset(product_sales, product  == "TechPad" & post_update == 1, select=sales_volume), mean)
+d = sapply(subset(product_sales, product  == "ElectroTab" & post_update == 1, select=sales_volume),mean)
+
+print(c(a, b, c, d))
+```
+
+
+```{r}
+group_mean <- product_sales %>%
+    group_by(product, post_update) %>%
+    summarise_at(vars(sales_volume),
+                 list(mean_sales = mean))
+print(group_mean)
+```
+
+## 1C. Estimate Difference-in-Differences (DiD) (6 Points):¶
+
+Assume TechPad represents the control group and ElectroTab represents the treatment group.
+Use the averages calculated in part 1B to estimate the value of DiD.
+Round your answers to two decimal places, for example, XX.xx.
+
+```{r}
+DiD1 = (d-b) - (c-a)
+DiD1
+```
+
+
+```{r}
+control0 <- group_mean[[3,3]]
+control1 <- group_mean[[4,3]]
+treatment0 <- group_mean[[1,3]]
+treatment1 <- group_mean[[2,3]]
+
+DiD = (treatment1 - treatment0) - (control1 - control0)
+DiD
+
+```
+
+## 1D. Estimate DiD with Linear Regression (6 Points):¶
+Interpret the DiD in the context of this problem.
+Round your answers to two decimal places, for example, XX.xx.
+Hint: Check with your answer from Part 1C; the two methods should reach the same DiD.
+
+```{r}
+
+product_sales1 = product_sales
+## Dummy variable for product exposed to treatment
+product_sales1$treated = ifelse(product_sales1$product == "ElectroTab", 1, 0)
+## interaction term between post_update and treated
+product_sales1$did = product_sales1$post_update * product_sales1$treated
+## estimate DiD
+didreg = lm(sales_volume ~ treated + post_update + did, data = product_sales1)
+summary(didreg)
+
+(summary(didreg)$coefficients[4])
+
+```
+
+# Question 2. Stock Returns (36 Points Total)¶
+Use the stock datasets below for Quesiton 2.
+stock_aapl.csv, stock_gm.csv, stock_tsla.csv, and stock_xom.csv have the following columns:
+Date: month end date.
+Close: closing price, which was already adjusted for stock split.
+Dividends: dividend in $ to shareholders. Not every company gave dividends in sample period.
+market_gspc.csv
+This dataset represents market return.
+Date: Month end date.
+return_market: simple return for the month.
+Please note: loading essential libraries like "PerformanceAnalytics" might take a few minutes.
+
+```{r}
+ticker_aapl <- read.csv("ticker_aapl.csv", header = TRUE)
+ticker_gm <- read.csv("ticker_gm.csv", header = TRUE)
+ticker_tsla <- read.csv("ticker_tsla.csv", header = TRUE)
+ticker_xom <- read.csv("ticker_xom.csv", header = TRUE)
+ticker_gspc <- read.csv("ticker_gspc.csv", header = TRUE)
+```
+
+
+```{r}
+# Install necessary libraries 
+# After the initial installation, you may comment this block out the second time, and simply load the library without reinstalling it.
+# Please note: loading essential libraries like "PerformanceAnalytics" might take a few minutes.
+suppressWarnings({
+install.packages("PerformanceAnalytics")
+install.packages("xts")
+install.packages("lubridate")
+install.packages("tidyverse")
+if(!require(data.table)) install.packages("data.table")})
+```
+
+```{r}
+# Load necessary libraries 
+# Please note: loading essential libraries like "PerformanceAnalytics" might take a few minutes.
+library(PerformanceAnalytics)
+library(xts)
+library(lubridate)
+library(tidyverse)
+library(data.table)
+```
+
+##2A. Please calculate simple returns of TSLA and XOM stocks for all months of 2015, 2016 and 2017, and report the month and year in which each stock gave its maximum and minimum simpe returen. (8 points)
+In case of a tie, report the earliest month.
+Do not forget to remove NA values.
+Hint: The shift() function may help in calculating simple return, but you are free to choose any method/function in R.
+Here is a quick reference: https://www.rdocumentation.org/packages/data.table/versions/1.11.4/topics/shift
+
+```{r}
+ticker_tsla$SimpleReturn <- with(ticker_tsla, (Close + Dividends) / lag(Close)-1)
+
+
+print(ticker_tsla)
+
+print(paste('tsla max return:', ticker_tsla  %>% drop_na() %>% slice_max(SimpleReturn) %>% select(Date)))
+print(paste('tsla min return:', ticker_tsla  %>% drop_na()  %>% slice_min(SimpleReturn) %>% select(Date)))
+
+```
+
+```{r}
+ticker_xom$SimpleReturn <- with(ticker_xom, (Close + Dividends) / lag(Close)-1)
+
+print(ticker_xom)
+
+print(paste('xom max return:', ticker_xom  %>% drop_na()  %>% slice_max(SimpleReturn) %>% select(Date)))
+print(paste('xom min return:', ticker_xom  %>% drop_na()  %>% slice_min(SimpleReturn) %>% select(Date)))
+
+#ticker_xom %>% arrange(-SimpleReturn)
+```
+
+
+## 2B. Among the four stocks, which one is the least risky and which one is the most risky based on their standard deviation? (5 points)¶
+For TSLA and XOM, you will need to use the monthly simple returns calculated in 2A.
+For AAPL and GM, use stock_aapl.csv, stock_gm.csv to calculate their returns.
+Note: you will need to calculate monthly simple returns for AAPL and GM as you did for TSLA and XOM in Q2A.
+
+```{r}
+
+ticker_aapl0 = ticker_aapl
+ticker_aapl0 %>% drop_na()
+
+ticker_aapl0$adjusted = ticker_aapl0$Close + ticker_aapl0$Dividends
+ticker_aapl0$Date = ymd(ticker_aapl0$Date)
+
+stock_returns_monthly_aapl <- ticker_aapl0 %>%
+    tq_transmute(select     = adjusted, 
+                 mutate_fun = periodReturn, 
+                 period     = "monthly", 
+                 col_rename = "Ra")
+
+
+ticker_gm0 = ticker_gm
+ticker_gm0 %>% drop_na()
+
+ticker_gm0$adjusted = ticker_gm0$Close + ticker_gm0$Dividends
+ticker_gm0$Date = ymd(ticker_gm0$Date)
+
+stock_returns_monthly_gm <- ticker_gm0 %>%
+    tq_transmute(select     = adjusted, 
+                 mutate_fun = periodReturn, 
+                 period     = "monthly", 
+                 col_rename = "Ra")
+
+```
+
+```{r}
+StDev_table <- data.frame(
+'tsla'=StdDev(stock_returns_monthly_tsla$Ra),
+'xom'=StdDev(stock_returns_monthly_xom$Ra),
+'appl'=StdDev(stock_returns_monthly_aapl$Ra),
+'gm'=StdDev(stock_returns_monthly_gm$Ra))
+
+t(as.matrix(StDev_table))
+
+```
+## 2C. Report average return over the sample period of each stock (4 points):¶
+Report return as percent not in decimals.
+Use arithmetic average.
+Round your answers to two decimal places, for example, X.xx%
+
+```{r}
+
+mean_table <- data.frame(stock = c('tsla','xom', 'appl', 'gm'), average = c(mean(stock_returns_monthly_tsla$Ra), 
+                           mean(stock_returns_monthly_xom$Ra), mean(stock_returns_monthly_aapl$Ra), mean(stock_returns_monthly_gm$Ra)))
+
+mean_table
+
+```
+
+## 2D. AAPL vs Market (4 points):¶
+
+Based on the monthly arithmetic average return, has AAPL stock underperformed/overperformed the market?
+By what percentage?
+Round your answers to two decimal places, for example, X.xx%
+
+```{r}
+baseline_returns_monthly <- "XLK" %>%
+    tq_get(get  = "tiingo",
+           from = min(ticker_aapl$Date),
+           to   = max(ticker_aapl$Date)) %>%
+    tq_transmute(select     = adjusted, 
+                 mutate_fun = periodReturn, 
+                 period     = "monthly", 
+                 col_rename = "Rb")
+
+baseline_returns_monthly%>%head()
+```
+
+
+```{r}
+
+appl_avg = mean_table[3,2]
+market_avg = mean(baseline_returns_monthly$Rb)
+
+appl_avg/market_avg
+
+```
+
+## 2E. What is the cumulative return of each stock in percent? (4 points)¶
+Round your answers to two decimal places, for example, X.xx%
+
+```{r}
+
+Return.cumulative(ticker_tsla$ContraRet,geometric = TRUE)
+
+```
+
+## 2F. To determine which stock is the most risky based on beta, we need to look at the beta values for TSLA (Tesla), XOM (ExxonMobil), AAPL (Apple), and GM (General Motors). Based on beta values, which stock is the most risky: TSLA, XOM, AAPL, or GM? (6 points)¶
+Comment on the adjusted  R2
+  of this stock.
+Do you think this stock is related to overall market?
+
+```{r}
+
+```
+
+## 2G. Plot cumulative returns of all four stocks in one graph. (3 points)¶
+
+```{r}
+
+```
+
+## 2H. Based on top 3 drawdowns, how long was GM stock’s longest recovery time? (2 points)¶
+Use the table.Drawdown( ) function to find drawdowns for stocks.
+Refer to the documentation here: https://www.rdocumentation.org/packages/PerformanceAnalytics/versions/2.0.4/topics/table.Drawdowns
+
+```{r}
+
+```
+

@@ -1,0 +1,26 @@
+```{r}
+quizDF=read.csv("PriceDemand.csv",header = TRUE)
+
+```
+~
+```{r}
+modelq = lm(Qty ~Price, data=quizDF)
+summary(modelq)
+```
+
+```{r}
+newq = data.frame(Price=17)
+predict(modelq, newq)
+```
+
+```{r}
+modelqlin = lm(log(Qty) ~ Price, data = quizDF)
+summary(modelqlin)
+```
+
+
+```{r}
+modelqlinlin = lm(log(Qty) ~ log(Price), data = quizDF)
+summary(modelqlinlin)
+```
+
