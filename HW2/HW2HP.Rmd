@@ -137,21 +137,37 @@ ticker_tsla$SimpleReturn <- with(ticker_tsla, (Close + Dividends) / lag(Close)-1
 print(ticker_tsla)
 
 print(paste('tsla max return:', ticker_tsla  %>% drop_na() %>% slice_max(SimpleReturn) %>% select(Date)))
-print(paste('tsla min return:', ticker_tsla  %>% drop_na()  %>% slice_min(SimpleReturn) %>% select(Date)))
+print(paste('tsla min return:', ticker_tsla  %>% drop_na()  %>% slice_min(SimpleReturn)))
 
 ```
+
 
 ```{r}
 ticker_xom$SimpleReturn <- with(ticker_xom, (Close + Dividends) / lag(Close)-1)
 
 print(ticker_xom)
 
-print(paste('xom max return:', ticker_xom  %>% drop_na()  %>% slice_max(SimpleReturn) %>% select(Date)))
-print(paste('xom min return:', ticker_xom  %>% drop_na()  %>% slice_min(SimpleReturn) %>% select(Date)))
+print(c('xom max return:', ticker_xom  %>% drop_na() %>% arrange(Date) %>% slice_max(SimpleReturn) ))
+print(c('xom min return:', ticker_xom  %>% drop_na()  %>% arrange(Date) %>% slice_min(SimpleReturn) ))
 
 #ticker_xom %>% arrange(-SimpleReturn)
 ```
 
+
+```{r}
+
+
+    
+print(c('max return:', stock_returns_monthly_tsla %>% arrange(Date)  %>% slice_max(Ra) %>% select(Date)))
+print(c('min return:', stock_returns_monthly_tsla %>% arrange(Date)  %>% slice_min(Ra) %>% select(Date)))
+```
+
+```{r}
+
+    
+print(c('max return:', stock_returns_monthly_xom %>% drop_na() %>% arrange(Date)  %>% slice_max(Ra)))
+print(c('min return:', stock_returns_monthly_xom %>% drop_na() %>% arrange(Date)  %>% slice_min(Ra) %>% select(Date)))
+```
 
 ## 2B. Among the four stocks, which one is the least risky and which one is the most risky based on their standard deviation? (5 points)¶
 For TSLA and XOM, you will need to use the monthly simple returns calculated in 2A.
@@ -160,6 +176,31 @@ Note: you will need to calculate monthly simple returns for AAPL and GM as you d
 
 ```{r}
 
+ticker_tsla0 = ticker_tsla
+ticker_tsla0 %>% drop_na()
+
+ticker_tsla0$adjusted = ticker_tsla$Close + ticker_tsla$Dividends
+ticker_tsla0$Date = ymd(ticker_tsla$Date)
+
+stock_returns_monthly_tsla <- ticker_tsla0 %>%
+    arrange(Date) %>%
+    tq_transmute(select     = adjusted, 
+                 mutate_fun = periodReturn, 
+                 period     = "monthly", 
+                 col_rename = "Ra")
+
+ticker_xom0 = ticker_xom
+
+ticker_xom0$adjusted = ticker_xom0$Close + ticker_xom0$Dividends
+ticker_xom0$Date = ymd(ticker_xom0$Date)
+
+stock_returns_monthly_xom <- ticker_xom0 %>%
+    arrange(Date) %>%
+    tq_transmute(select     = adjusted, 
+                 mutate_fun = periodReturn, 
+                 period     = "monthly", 
+                 col_rename = "Ra")
+
 ticker_aapl0 = ticker_aapl
 ticker_aapl0 %>% drop_na()
 
@@ -167,6 +208,7 @@ ticker_aapl0$adjusted = ticker_aapl0$Close + ticker_aapl0$Dividends
 ticker_aapl0$Date = ymd(ticker_aapl0$Date)
 
 stock_returns_monthly_aapl <- ticker_aapl0 %>%
+    arrange(Date) %>% 
     tq_transmute(select     = adjusted, 
                  mutate_fun = periodReturn, 
                  period     = "monthly", 
@@ -180,6 +222,7 @@ ticker_gm0$adjusted = ticker_gm0$Close + ticker_gm0$Dividends
 ticker_gm0$Date = ymd(ticker_gm0$Date)
 
 stock_returns_monthly_gm <- ticker_gm0 %>%
+    arrange(Date) %>% 
     tq_transmute(select     = adjusted, 
                  mutate_fun = periodReturn, 
                  period     = "monthly", 
@@ -189,10 +232,10 @@ stock_returns_monthly_gm <- ticker_gm0 %>%
 
 ```{r}
 StDev_table <- data.frame(
-'tsla'=StdDev(stock_returns_monthly_tsla$Ra),
-'xom'=StdDev(stock_returns_monthly_xom$Ra),
-'appl'=StdDev(stock_returns_monthly_aapl$Ra),
-'gm'=StdDev(stock_returns_monthly_gm$Ra))
+'tsla'= round(StdDev(stock_returns_monthly_tsla$Ra)*100,2),
+'xom'=round(StdDev(stock_returns_monthly_xom$Ra)*100,2),
+'appl'= round(StdDev(stock_returns_monthly_aapl$Ra)*100,2),
+'gm'= round(StdDev(stock_returns_monthly_gm$Ra)*100,2))
 
 t(as.matrix(StDev_table))
 
@@ -205,7 +248,10 @@ Round your answers to two decimal places, for example, X.xx%
 ```{r}
 
 mean_table <- data.frame(stock = c('tsla','xom', 'appl', 'gm'), average = c(mean(stock_returns_monthly_tsla$Ra), 
-                           mean(stock_returns_monthly_xom$Ra), mean(stock_returns_monthly_aapl$Ra), mean(stock_returns_monthly_gm$Ra)))
+                           mean(stock_returns_monthly_xom$Ra), mean(stock_returns_monthly_aapl$Ra), 
+                           mean(stock_returns_monthly_gm$Ra)))
+
+mean_table$average = sapply(mean_table$average, function(i){round(i*100,2)})
 
 mean_table
 
@@ -218,34 +264,30 @@ By what percentage?
 Round your answers to two decimal places, for example, X.xx%
 
 ```{r}
-baseline_returns_monthly <- "XLK" %>%
-    tq_get(get  = "tiingo",
-           from = min(ticker_aapl$Date),
-           to   = max(ticker_aapl$Date)) %>%
-    tq_transmute(select     = adjusted, 
-                 mutate_fun = periodReturn, 
-                 period     = "monthly", 
-                 col_rename = "Rb")
 
-baseline_returns_monthly%>%head()
+paste("market return:", round(mean(ticker_gspc$return_market)*100,2))
+paste('appl return:', mean_table$average[mean_table$stock=='appl'])
+
+
 ```
 
+apply outperformed by 0.76% 
 
-```{r}
-
-appl_avg = mean_table[3,2]
-market_avg = mean(baseline_returns_monthly$Rb)
-
-appl_avg/market_avg
-
-```
 
 ## 2E. What is the cumulative return of each stock in percent? (4 points)¶
 Round your answers to two decimal places, for example, X.xx%
 
 ```{r}
 
-Return.cumulative(ticker_tsla$ContraRet,geometric = TRUE)
+cumsumframe = data.frame(stock = character(), cumu_return = numeric())
+cumsumframe[1,] =  c('tsla', round(Return.cumulative(ticker_tsla0$SimpleReturn, 
+                                                     geometric = TRUE) *100,2))
+cumsumframe[2,] =  c('xom', round(Return.cumulative(ticker_xom0$SimpleReturn, 
+                                                     geometric = TRUE )*100,2))
+cumsumframe[3,] =  c('aapl', round(Return.cumulative(ticker_aapl0$SimpleReturn, 
+                                                     geometric = TRUE )*100,2))
+cumsumframe[4,] =  c('gm',   round(Return.cumulative(ticker_gm0$SimpleReturn, 
+                                                     geometric = TRUE )*100,2))
 
 ```
 
