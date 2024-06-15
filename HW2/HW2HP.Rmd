@@ -111,6 +111,7 @@ install.packages("PerformanceAnalytics")
 install.packages("xts")
 install.packages("lubridate")
 install.packages("tidyverse")
+install.packages('ggplot2')
 if(!require(data.table)) install.packages("data.table")})
 ```
 
@@ -122,6 +123,8 @@ library(xts)
 library(lubridate)
 library(tidyverse)
 library(data.table)
+library(ggplot2)
+
 ```
 
 ##2A. Please calculate simple returns of TSLA and XOM stocks for all months of 2015, 2016 and 2017, and report the month and year in which each stock gave its maximum and minimum simpe returen. (8 points)
@@ -344,20 +347,17 @@ beta_frame
 
 ```{r}
 
-join1 = right_join(stock_returns_monthly_tsla, stock_returns_monthly_xom, by = 'Date', suffix = c(".tsla", ".xom"))
-join2 = right_join(stock_returns_monthly_aapl, stock_returns_monthly_gm, by = 'Date', suffix = c(".aapl", ".gm"))
+join1 = right_join(stock_returns_monthly_tsla, stock_returns_monthly_xom, by = 'Date', suffix = c(".TSLA", ".XOM"))
+join2 = right_join(stock_returns_monthly_aapl, stock_returns_monthly_gm, by = 'Date', suffix = c(".AAPL", ".GM"))
 all_returns = right_join(join1, join2, by = 'Date')
-all_returns$Date = 
-all_returns_time = xts(all_returns, order.by = all_returns$Date)
+all_returns_time = xts(all_returns[,-1], order.by = all_returns$Date)
 ```
 
 ```{r}
-library(ggplot2)
-
-chart.CumReturns(all_returns_time$Ra.tsla, wealth.index=FALSE, geometric=TRUE)
-  #                , plot.engine="ggplot2") + theme_classic() +
-  # labs(x="Date", y="Cumulative Returns") + 
-  # scale_y_continuous(labels = scales::percent)
+chart.CumReturns(all_returns_time, wealth.index=FALSE, geometric=TRUE, plot.engine="ggplot2") + 
+  theme_classic() +
+  labs(x="Date", y="Cumulative Returns") + 
+  scale_y_continuous(labels = scales::percent)
 ```
 
 
@@ -366,6 +366,8 @@ Use the table.Drawdown( ) function to find drawdowns for stocks.
 Refer to the documentation here: https://www.rdocumentation.org/packages/PerformanceAnalytics/versions/2.0.4/topics/table.Drawdowns
 
 ```{r}
+
+table.Drawdowns(all_returns_time$Ra.GM, top=5, digits=4)
 
 ```
 
