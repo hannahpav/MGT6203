@@ -164,15 +164,15 @@ print(c('xom min return:', ticker_xom  %>% drop_na()  %>% arrange(Date) %>% slic
 
 
     
-print(c('max return:', ticker_tsla0 %>% arrange(Date)  %>% slice_max(Ra) %>% select(Date)))
-print(c('min return:', ticker_tsla0 %>% arrange(Date)  %>% slice_min(Ra) %>% select(Date)))
+print(c('max return:', stock_returns_monthly_tsla %>% arrange(Date)  %>% slice_max(Ra) %>% select(Date)))
+print(c('min return:', stock_returns_monthly_tsla %>% arrange(Date)  %>% slice_min(Ra) %>% select(Date)))
 ```
 
 ```{r}
 
     
-print(c('max return:', ticker_xom0 %>% drop_na() %>% arrange(Date)  %>% slice_max(Ra)))
-print(c('min return:', ticker_xom0 %>% drop_na() %>% arrange(Date)  %>% slice_min(Ra) %>% select(Date)))
+print(c('max return:', stock_returns_monthly_xom %>% drop_na() %>% arrange(Date)  %>% slice_max(Ra)))
+print(c('min return:', stock_returns_monthly_xom %>% drop_na() %>% arrange(Date)  %>% slice_min(Ra) %>% select(Date)))
 ```
 
 ## 2B. Among the four stocks, which one is the least risky and which one is the most risky based on their standard deviation? (5 points)¶
@@ -182,15 +182,14 @@ Note: you will need to calculate monthly simple returns for AAPL and GM as you d
 
 ```{r}
 ## TSLA
+library(tidyquant)
 ticker_tsla0 = ticker_tsla
 ticker_tsla0 %>% drop_na()
 
 ticker_tsla0$adjusted = ticker_tsla$Close + ticker_tsla$Dividends
 ticker_tsla0$Date = ymd(ticker_tsla$Date)
 
-ticker_tsla0 <- ticker_tsla0 %>%
-    ymd(Date) %>%
-  drop_na()
+stock_returns_monthly_tsla <- ticker_tsla0 %>%
     tq_transmute(select     = adjusted, 
                  mutate_fun = periodReturn, 
                  period     = "monthly", 
@@ -205,7 +204,7 @@ ticker_xom0 = ticker_xom
 ticker_xom0$adjusted = ticker_xom0$Close + ticker_xom0$Dividends
 ticker_xom0$Date = ymd(ticker_xom0$Date)
 
-ticker_xom0 <- ticker_xom0 %>%
+stock_returns_monthly_xom <- ticker_xom0 %>%
     arrange(Date) %>%
     tq_transmute(select     = adjusted, 
                  mutate_fun = periodReturn, 
@@ -219,7 +218,7 @@ ticker_aapl0 %>% drop_na()
 ticker_aapl0$adjusted = ticker_aapl0$Close + ticker_aapl0$Dividends
 ticker_aapl0$Date = ymd(ticker_aapl0$Date)
 
-ticker_aapl0 <- ticker_aapl0 %>%
+stock_returns_monthly_aapl <- ticker_aapl0 %>%
     arrange(Date) %>% 
     tq_transmute(select     = adjusted, 
                  mutate_fun = periodReturn, 
@@ -234,7 +233,7 @@ ticker_gm0 %>% drop_na()
 ticker_gm0$adjusted = ticker_gm0$Close + ticker_gm0$Dividends
 ticker_gm0$Date = ymd(ticker_gm0$Date)
 
-ticker_gm0 <- ticker_gm0 %>%
+stock_returns_monthly_gm <- ticker_gm0 %>%
     arrange(Date) %>% 
     tq_transmute(select     = adjusted, 
                  mutate_fun = periodReturn, 
@@ -351,8 +350,8 @@ beta_frame
 
 ```{r}
 
-  join1 = right_join(ticker_tsla0, ticker_xom0, by = 'Date', suffix = c(".TSLA", ".XOM"))
-  join2 = right_join(ticker_aapl0, ticker_gm0, by = 'Date', suffix = c(".AAPL", ".GM"))
+  join1 = right_join(stock_returns_monthly_tsla, stock_returns_monthly_xom, by = 'Date', suffix = c(".TSLA", ".XOM"))
+  join2 = right_join(stock_returns_monthly_aapl, stock_returns_monthly_gm, by = 'Date', suffix = c(".AAPL", ".GM"))
   all_returns = right_join(join1, join2, by = 'Date')
   all_returns_time = xts(all_returns[,-1], order.by = all_returns$Date)
 ```
@@ -371,7 +370,7 @@ Refer to the documentation here: https://www.rdocumentation.org/packages/Perform
 
 ```{r}
 
-table.Drawdowns(all_returns_time$Ra.GM, top=5, digits=4)
+table.Drawdowns(all_returns_time$SimpleReturn.GM, top=5, digits=4, geometric=TRUE)
 
 ```
 
