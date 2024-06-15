@@ -135,15 +135,19 @@ Here is a quick reference: https://www.rdocumentation.org/packages/data.table/ve
 
 ```{r}
 ticker_tsla$SimpleReturn <- with(ticker_tsla, (Close + Dividends) / lag(Close)-1)
-
+ticker_tsla$Date = ymd(ticker_tsla$Date)
+ticker_tsla = drop_na(ticker_tsla)
 
 print(ticker_tsla)
 
-print(paste('tsla max return:', ticker_tsla  %>% drop_na() %>% slice_max(SimpleReturn) %>% select(Date)))
-print(paste('tsla min return:', ticker_tsla  %>% drop_na()  %>% slice_min(SimpleReturn)))
+print(c('tsla max return:', ticker_tsla[which.max(ticker_tsla$SimpleReturn),]))
+print(c('tsla min return:', ticker_tsla[which.min(ticker_tsla$SimpleReturn),]))
 
 ```
 
+```{r}
+ticker_xom  %>% drop_na() %>% arrange(Date) %>% slice_max(SimpleReturn)
+```
 
 ```{r}
 ticker_xom$SimpleReturn <- with(ticker_xom, (Close + Dividends) / lag(Close)-1)
@@ -153,7 +157,6 @@ print(ticker_xom)
 print(c('xom max return:', ticker_xom  %>% drop_na() %>% arrange(Date) %>% slice_max(SimpleReturn) ))
 print(c('xom min return:', ticker_xom  %>% drop_na()  %>% arrange(Date) %>% slice_min(SimpleReturn) ))
 
-#ticker_xom %>% arrange(-SimpleReturn)
 ```
 
 
@@ -161,15 +164,15 @@ print(c('xom min return:', ticker_xom  %>% drop_na()  %>% arrange(Date) %>% slic
 
 
     
-print(c('max return:', stock_returns_monthly_tsla %>% arrange(Date)  %>% slice_max(Ra) %>% select(Date)))
-print(c('min return:', stock_returns_monthly_tsla %>% arrange(Date)  %>% slice_min(Ra) %>% select(Date)))
+print(c('max return:', ticker_tsla0 %>% arrange(Date)  %>% slice_max(Ra) %>% select(Date)))
+print(c('min return:', ticker_tsla0 %>% arrange(Date)  %>% slice_min(Ra) %>% select(Date)))
 ```
 
 ```{r}
 
     
-print(c('max return:', stock_returns_monthly_xom %>% drop_na() %>% arrange(Date)  %>% slice_max(Ra)))
-print(c('min return:', stock_returns_monthly_xom %>% drop_na() %>% arrange(Date)  %>% slice_min(Ra) %>% select(Date)))
+print(c('max return:', ticker_xom0 %>% drop_na() %>% arrange(Date)  %>% slice_max(Ra)))
+print(c('min return:', ticker_xom0 %>% drop_na() %>% arrange(Date)  %>% slice_min(Ra) %>% select(Date)))
 ```
 
 ## 2B. Among the four stocks, which one is the least risky and which one is the most risky based on their standard deviation? (5 points)¶
@@ -185,8 +188,9 @@ ticker_tsla0 %>% drop_na()
 ticker_tsla0$adjusted = ticker_tsla$Close + ticker_tsla$Dividends
 ticker_tsla0$Date = ymd(ticker_tsla$Date)
 
-stock_returns_monthly_tsla <- ticker_tsla0 %>%
-    arrange(Date) %>%
+ticker_tsla0 <- ticker_tsla0 %>%
+    ymd(Date) %>%
+  drop_na()
     tq_transmute(select     = adjusted, 
                  mutate_fun = periodReturn, 
                  period     = "monthly", 
@@ -201,7 +205,7 @@ ticker_xom0 = ticker_xom
 ticker_xom0$adjusted = ticker_xom0$Close + ticker_xom0$Dividends
 ticker_xom0$Date = ymd(ticker_xom0$Date)
 
-stock_returns_monthly_xom <- ticker_xom0 %>%
+ticker_xom0 <- ticker_xom0 %>%
     arrange(Date) %>%
     tq_transmute(select     = adjusted, 
                  mutate_fun = periodReturn, 
@@ -215,7 +219,7 @@ ticker_aapl0 %>% drop_na()
 ticker_aapl0$adjusted = ticker_aapl0$Close + ticker_aapl0$Dividends
 ticker_aapl0$Date = ymd(ticker_aapl0$Date)
 
-stock_returns_monthly_aapl <- ticker_aapl0 %>%
+ticker_aapl0 <- ticker_aapl0 %>%
     arrange(Date) %>% 
     tq_transmute(select     = adjusted, 
                  mutate_fun = periodReturn, 
@@ -230,7 +234,7 @@ ticker_gm0 %>% drop_na()
 ticker_gm0$adjusted = ticker_gm0$Close + ticker_gm0$Dividends
 ticker_gm0$Date = ymd(ticker_gm0$Date)
 
-stock_returns_monthly_gm <- ticker_gm0 %>%
+ticker_gm0 <- ticker_gm0 %>%
     arrange(Date) %>% 
     tq_transmute(select     = adjusted, 
                  mutate_fun = periodReturn, 
@@ -242,10 +246,10 @@ stock_returns_monthly_gm <- ticker_gm0 %>%
 
 ```{r}
 StDev_table <- data.frame(
-'tsla'= round(StdDev(stock_returns_monthly_tsla$Ra)*100,2),
-'xom'=round(StdDev(stock_returns_monthly_xom$Ra)*100,2),
-'appl'= round(StdDev(stock_returns_monthly_aapl$Ra)*100,2),
-'gm'= round(StdDev(stock_returns_monthly_gm$Ra)*100,2))
+'tsla'= round(StdDev(ticker_tsla0$SimpleReturn)*100,2),
+'xom'=round(StdDev(ticker_xom0$SimpleReturn)*100,2),
+'appl'= round(StdDev(ticker_aapl0$SimpleReturn)*100,2),
+'gm'= round(StdDev(ticker_gm0$SimpleReturn)*100,2))
 
 t(as.matrix(StDev_table))
 
@@ -257,9 +261,9 @@ Round your answers to two decimal places, for example, X.xx%
 
 ```{r}
 
-mean_table <- data.frame(stock = c('tsla','xom', 'appl', 'gm'), average = c(mean(stock_returns_monthly_tsla$Ra), 
-                           mean(stock_returns_monthly_xom$Ra), mean(stock_returns_monthly_aapl$Ra), 
-                           mean(stock_returns_monthly_gm$Ra)))
+mean_table <- data.frame(stock = c('tsla','xom', 'appl', 'gm'), average = c(mean(ticker_tsla0$SimpleReturn), 
+                           mean(ticker_xom0$SimpleReturn), mean(ticker_aapl0$SimpleReturn), 
+                           mean(ticker_gm0$SimpleReturn)))
 
 mean_table$average = sapply(mean_table$average, function(i){round(i*100,2)})
 
@@ -290,13 +294,13 @@ Round your answers to two decimal places, for example, X.xx%
 ```{r}
 
 cumsumframe = data.frame(stock = character(), cumu_return = numeric())
-cumsumframe[1,] =  c('tsla', round(Return.cumulative(stock_returns_monthly_tsla$Ra, 
+cumsumframe[1,] =  c('tsla', round(Return.cumulative(ticker_tsla0$SimpleReturn, 
                                                      geometric = TRUE) *100,2))
-cumsumframe[2,] =  c('xom', round(Return.cumulative(stock_returns_monthly_xom$Ra, 
+cumsumframe[2,] =  c('xom', round(Return.cumulative(ticker_xom0$SimpleReturn, 
                                                      geometric = TRUE )*100,2))
-cumsumframe[3,] =  c('aapl', round(Return.cumulative(stock_returns_monthly_aapl$Ra, 
+cumsumframe[3,] =  c('aapl', round(Return.cumulative(ticker_aapl0$SimpleReturn, 
                                                      geometric = TRUE )*100,2))
-cumsumframe[4,] =  c('gm',   round(Return.cumulative(stock_returns_monthly_gm$Ra, 
+cumsumframe[4,] =  c('gm',   round(Return.cumulative(ticker_gm0$SimpleReturn, 
                                                      geometric = TRUE )*100,2))
 
 cumsumframe
@@ -312,22 +316,22 @@ Do you think this stock is related to overall market?
 ```{r}
 
 ## TSLA
-tsla_mod = lm(stock_returns_monthly_tsla$Ra ~ ticker_gspc$return_market)
+tsla_mod = lm(ticker_tsla0$SimpleReturn ~ ticker_gspc$return_market)
 summary(tsla_mod)
 
 ## XOM
 
-xom_mod = lm(stock_returns_monthly_xom$Ra ~ ticker_gspc$return_market)
+xom_mod = lm(ticker_xom0$SimpleReturn ~ ticker_gspc$return_market)
 summary(xom_mod)
 
 ## AAPL
 
-aapl_mod = lm(stock_returns_monthly_aapl$Ra ~ ticker_gspc$return_market)
+aapl_mod = lm(ticker_aapl0$SimpleReturn ~ ticker_gspc$return_market)
 summary(aapl_mod)
 
 ## GM
 
-gm_mod = lm(stock_returns_monthly_gm$Ra ~ ticker_gspc$return_market)
+gm_mod = lm(ticker_gm0$SimpleReturn ~ ticker_gspc$return_market)
 summary(gm_mod)
 
 ```
@@ -347,10 +351,10 @@ beta_frame
 
 ```{r}
 
-join1 = right_join(stock_returns_monthly_tsla, stock_returns_monthly_xom, by = 'Date', suffix = c(".TSLA", ".XOM"))
-join2 = right_join(stock_returns_monthly_aapl, stock_returns_monthly_gm, by = 'Date', suffix = c(".AAPL", ".GM"))
-all_returns = right_join(join1, join2, by = 'Date')
-all_returns_time = xts(all_returns[,-1], order.by = all_returns$Date)
+  join1 = right_join(ticker_tsla0, ticker_xom0, by = 'Date', suffix = c(".TSLA", ".XOM"))
+  join2 = right_join(ticker_aapl0, ticker_gm0, by = 'Date', suffix = c(".AAPL", ".GM"))
+  all_returns = right_join(join1, join2, by = 'Date')
+  all_returns_time = xts(all_returns[,-1], order.by = all_returns$Date)
 ```
 
 ```{r}
