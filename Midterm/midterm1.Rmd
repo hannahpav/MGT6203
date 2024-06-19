@@ -91,4 +91,215 @@ credituse$incstu = credituse$Income * ( as.integer(credituse$Student)-1)
 cred_mod_inter = lm(Balance ~ Income + Student + incstu, data=credituse)
 summary(cred_mod_inter)
 ```
+# Part 2
+Instructions for Questions 9-11
+GT Bank wants you to analyze the “Default” dataset from the ISLR package, with the hopes of you uncovering new insights. Download the “Default” dataset from the ISLR package and model the data such that default is your dependent variable and the rest of the features (student, balance, and income) are your independent variables. Use your model to answer questions Q9 through Q11.
+
+ 
+
+Data Dictionary for the “Default” Dataset:
+1. default: Indicates whether a credit card holder defaulted on their credit card payment. It is a binary variable with two levels: “No” (indicating no default) and “Yes” (indicating default).
+2. student: Indicates whether the individual is a student (e.g., “Yes” or “No”).
+3. balance: The average credit card balance in dollars for each individual.
+4. income: The annual income of the individual in dollars.
+
+## 1 Which interpretation of income is correct?
+
+```{r}
+dtable = (Default)
+def_mod = glm(default~., data = dtable, family = 'binomial')
+summary(def_mod)
+```
+
+## 2 What is the probability that Alex who is a student, and has a credit card balance of $2,000 and makes $65,000 annually - will default on her credit card payment? Round your answer to the nearest percentage point.
+
+```{r}
+
+alex = data.frame(student = "Yes", balance = 2000, income = 65000)
+lo = predict(def_mod, newdata=alex, price = 'response')
+prob_alex = (exp(lo)/(1+exp(lo)))
+prob_alex
+```
+```{r}
+hold = exp(-1.087e+01+ -6.468e-01 + 5.737e-03*2000 + 3.033e-06  * )
+hold/(1+hold)
+```
+
+## 11 What is the AUC for the model?
+
+```{r}
+if (!require(ggExtra)) install.packages ("ggExtra")
+library(ggExtra)
+if (!require(ROCR))install.packages ("ROCR")
+library(ROCR)
+
+dtable$prob_model = predict(def_mod, newdata = dtable, type='response')
+
+pred <- prediction(dtable$prob_model, dtable$default)
+
+perf = performance(pred, "tpr","fpr")
+plot(perf, colorize=T)
+
+auc.perf <- performance( pred , measure = 'auc')
+auc.perf@y.values
+
+```
+
+## 12 GT Bank wants to send promotional material to customers that are at risk of defaulting on their credit card balances, in an attempt to encourage customers to pay off their debt. They have identified four customers to focus on Kim, James, Sam, and Kennedy. Use the same “Default” dataset from the ISLR package, and create a model that uses student and income to predict default. Then use the model to identify which customer has the highest probability of defaulting on their credit card balance. You can find more information about each customer below.
+
+```{r}
+d2 = Default[-3]
+dmod2 = glm(default ~ student + income, data=d2, family = 'binomial')
+summary(dmod2)
+```
+
+```{r}
+james = data.frame(income = 30000, student = 'Yes')
+kim = data.frame(income=55000, student = 'Yes')
+sam = data.frame(income = 45000, student = 'No')
+kennedy = data.frame( income = 65000, student = 'No')
+
+newframe = data.frame(names = c('james', 'kim', 'sam', 'kennedy'), probs = c(1,2,3,4))
+i=1
+
+for(name in list(james, kim, sam, kennedy)){
+  lo = predict(dmod2, newdata=name, price = response)
+  newframe[i,2] = (exp(lo)/(1+exp(lo)))*100
+  i=i+1
+}
+
+newframe
+
+```
+
+# Instructions for Questions 13-19
+Create a dataset that has monthly returns for the following stocks: TSLA, JNJ, GOOGL, and GE from January 1, 2018 to December 31, 2022 using their "adjusted" price. Create an equally weighted portfolio consisting of these stocks and calculate the monthly returns of your portfolio. Import the Market Returns and Risk-Free Rate dataset and join with your portfolio to obtain the market return (“market return”) and risk-free rate (“risk-free”). 
+
+Hint #1: Recommended R Packages for Use
+
+library(tidyverse)
+library(tidyquant)
+library(PerformanceAnalytics)
+library(xts)
+library(lubridate)
+library(dplyr)
+#Display the data frame
+View(myPortfolio)
+
+Hint #2:  The code to retrieve the necessary data from the tidyquant package on R is as follows: 
+
+myPortfolio<- c('TSLA', 'JNJ', 'GOOGL', 'GE') %>% tq_get(get = "stock.prices", from = "2018-01-01", to = "2022-12-31")
+
+#Display the data frame
+View(myPortfolio)
+
+Hint #3:  An equally weighted portfolio means that you invest the same proportion of your total investment into each stock. If you have 4 stocks, you'd invest 25% of your total funds into each.
+
+```{r}
+library(tidyverse)
+library(tidyquant)
+library(PerformanceAnalytics)
+library(xts)
+library(lubridate)
+library(dplyr)
+```
+
+```{r}
+#Display the data frame
+risk_free = read.csv("Market_and_RiskFree_Returns_2018_to_2022.csv")
+myPortfolio<- c('TSLA', 'JNJ', 'GOOGL', 'GE') %>% tq_get(get = "stock.prices", from = "2018-01-01", to = "2022-12-31")
+View(myPortfolio)
+```
+
+```{r}
+class(myPortfolio$date)
+```
+
+
+## 13 Looking at portfolio monthly returns, how many months did this portfolio exceed a 25% return rate? 
+
+```{r}
+
+stock_returns <- myPortfolio %>% group_by(symbol) %>% tq_transmute(select = adjusted,
+                                                              mutate_fun = periodReturn, 
+                                                              period = "monthly",
+                                                              col_rename = "StockReturns")
+weights_1 <- c(0.25, 0.25, 0.25, 0.25)
+
+portfolio_returns <- stock_returns%>%
+  tq_portfolio(assets_col= symbol,
+               returns_col=StockReturns,
+               weights = weights_1,
+               col_rename= "StockReturns")
+portfolio_returns[portfolio_returns$StockReturns>0.25,]
+```
+
+## 14 Utilizing the companies from question above, calculate the following, as a percentage, rounded to four decimal places: 
+
+Portfolio standard deviation 
+GE standard deviation 
+Portfolio arithmetic average 
+GE arithmetic average 
+
+```{r}
+#portfolio stdev
+StdDev(portfolio_returns$StockReturns)*100
+
+#ge stdev
+stock_returns %>% filter(symbol == 'GE') %>% summarize(StdDev(StockReturns)*100)
+
+#portfolio mean
+mean(portfolio_returns$StockReturns)*100
+
+#ge mean
+stock_returns %>% filter(symbol == 'GE') %>% summarize(mean(StockReturns)*100)
+
+```
+
+## 15 What is the (compounded) cumulative return of the portfolio rounded to the nearest percent?
+
+```{r}
+Return.cumulative(portfolio_returns$StockReturns,geometric = TRUE)*100
+
+```
+## 16 Calculate TSLA's average monthly excess return relative to the market. Give your answer as a percentage, rounded to two decimal places.
+
+```{r}
+
+TSLA_return = stock_returns %>% filter(symbol == 'TSLA')
+
+mean(TSLA_return$StockReturns - risk_free$market_return)*100
+
+
+```
+## 17 Estimate Beta and Adjusted R2 using a simple linear model for the portfolio return vs the market return.  Which statement has the correct Beta and Adjusted R2 output and corresponding correct interpretation?
+
+
+```{r}
+returnmodel = lm(portfolio_returns$StockReturns ~ risk_free$market_return )
+summary(returnmodel)
+```
+
+
+
+```{r}
+
+
+baseline_returns <- "^GSPC" %>% tq_get(get = "stock.prices",
+                                       from = "2018-01-01",
+                                       to = "2022-12-31") %>%
+  tq_transmute(select= adjusted,
+               mutate_fun=periodReturn,
+               period= "monthly",
+               col_rename = "BaselineReturns")
+
+
+
+single_portfolio<-left_join(portfolio_returns,
+                            baseline_returns,
+                            by = "date")
+
+single_portfolio %>% tq_performance(Ra = StockReturns, Rb = BaselineReturns, performance_fun=table.CAPM) %>%
+  select(Alpha, AnnualizedAlpha, Beta, Correlation, 'R-squared')
+```
 
