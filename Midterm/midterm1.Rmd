@@ -279,27 +279,22 @@ mean(TSLA_return$StockReturns - risk_free$market_return)*100
 returnmodel = lm(portfolio_returns$StockReturns ~ risk_free$market_return )
 summary(returnmodel)
 ```
-
-
+## 18 Create a drawdown chart and table for the portfolio using the Drawdown() functions. Display the top 5 drawdowns to 4 digits.  What statement below is correct?
 
 ```{r}
 
+xts_port <- xts(portfolio_returns[,-1],order.by = portfolio_returns[[1]],)
 
-baseline_returns <- "^GSPC" %>% tq_get(get = "stock.prices",
-                                       from = "2018-01-01",
-                                       to = "2022-12-31") %>%
-  tq_transmute(select= adjusted,
-               mutate_fun=periodReturn,
-               period= "monthly",
-               col_rename = "BaselineReturns")
+chart.Drawdown(xts_port)
+table.Drawdowns(xts_port,top = 5,digits = 4)
+```
 
+## 19 In which month is the difference between the portfolio return and the market return the highest?
 
+```{r}
 
-single_portfolio<-left_join(portfolio_returns,
-                            baseline_returns,
-                            by = "date")
+portfolio_returns$diff = portfolio_returns$StockReturns - risk_free$market_return
+portfolio_returns[which.max(portfolio_returns$diff),]
 
-single_portfolio %>% tq_performance(Ra = StockReturns, Rb = BaselineReturns, performance_fun=table.CAPM) %>%
-  select(Alpha, AnnualizedAlpha, Beta, Correlation, 'R-squared')
 ```
 
