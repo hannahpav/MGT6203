@@ -90,6 +90,10 @@ summary(modelLogLog)
 credituse$incstu = credituse$Income * ( as.integer(credituse$Student)-1)
 cred_mod_inter = lm(Balance ~ Income + Student + incstu, data=credituse)
 summary(cred_mod_inter)
+
+amy = data.frame(Income = 30.000, Student = 'Yes', incstu = 30.000)
+predict(cred_mod_inter, amy)
+
 ```
 # Part 2
 Instructions for Questions 9-11
@@ -121,7 +125,7 @@ prob_alex = (exp(lo)/(1+exp(lo)))
 prob_alex
 ```
 ```{r}
-hold = exp(-1.087e+01+ -6.468e-01 + 5.737e-03*2000 + 3.033e-06  * )
+hold = exp(-1.087e+01+ -6.468e-01 + 5.737e-03*2000 + 3.033e-06  * 65000)
 hold/(1+hold)
 ```
 
@@ -163,8 +167,8 @@ newframe = data.frame(names = c('james', 'kim', 'sam', 'kennedy'), probs = c(1,2
 i=1
 
 for(name in list(james, kim, sam, kennedy)){
-  lo = predict(dmod2, newdata=name, price = response)
-  newframe[i,2] = (exp(lo)/(1+exp(lo)))*100
+  o = predict(dmod2, newdata=name, price = response)
+  newframe[i,2] = (exp(o)/(1+exp(o)))*100
   i=i+1
 }
 
@@ -296,5 +300,58 @@ table.Drawdowns(xts_port,top = 5,digits = 4)
 portfolio_returns$diff = portfolio_returns$StockReturns - risk_free$market_return
 portfolio_returns[which.max(portfolio_returns$diff),]
 
+```
+## 32 Consider a linear regression model estimating the fuel efficiency of a car in terms of miles per gallon of gas (mpg)
+based on its origin (region A, B or C) and number of cylinders with the following formula:
+
+Based on this model, if X is the mpg of a car with 6 cylinders originating from region B, 
+and Z is the mpg of a car with 5 cylinders originating from region A, what is the value of X - Z rounded to two decimals?
+
+Note:  Round to two decimal places.  Example XX.xx
+ 
+The estimated values of the regression coefficients are provided below:
+```{r}
+b0 = 39.60 #int
+b1 = -4.30 #region B
+b2 = 2.68 #region C
+b3 = -2.87 #cylinders
+
+X = b0 + b1 + 6*b3
+Z = b0 + 5*b3
+round((X-Z),2)
+
+```
+
+## 33 Consider the following linear regression model in R:  lm(response ~ pred1 + pred2 + pred3, data = dataset)
+Now, consider we would like to evaluate if this model's underlying predictor variables exhibit multi-collinearity.  When testing our predictive variables for multicollinearity, we create a new model in R using just the independent variables of the previous model so that we have:   lm(pred1 ~ pred2 + pred3, data = dataset).  After running this new model, we get an R-Squared of 0.82.  Based on this result, what is the VIF for pred1 using three decimal places?
+
+Note:  Round to three decimal places.  Example XX.xxx
+
+```{r}
+rs = 0.82
+round(1/(1-rs),3)
+```
+## 34 Using the following confusion matrix, what is the precision of the model to three decimal places?
+
+Note:  For the confusion matrix below 1 = True and 0 = False
+
+```{r}
+TN = 271
+TP = 843
+FP = 89
+FN = 65
+
+precision = TP/(TP+FP)
+round(precision,3)
+```
+
+## 39 Consider the equation 8.04 log(Y) = 1.85 + 85.4 log(X).  What is the elasticity?
+
+Provide your answer in the context of the following statement: "A 1% increase in X would result in a ___% increase in Y"
+
+Note:  Round to two decimals.  10.444 would round to 10.44 while 10.445 would round to 10.45
+
+```{r}
+round(85.4/8.04,2)
 ```
 
