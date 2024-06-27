@@ -1,0 +1,84 @@
+```{r}
+library(tidyquant)
+library(xts)
+library(PerformanceAnalytics)
+library(dplyr)
+library(ggplot2)
+library(zoo)
+library(lubridate)
+library(xts)
+```
+
+```{r}
+personal_tiingo_api_key = '75b478897440f63dfd9ed6915f72f30e832defb0'
+tiingo_api_key(personal_tiingo_api_key)
+```
+
+
+Self Assessment 6
+Self Assessment 6 is graded and covers content in Modules 6, 7, and 8 . You may work on the self assessment for as long as you like within the given window.  Please note that as long as you don't click "submit" for a question, you can change your answer as many times as needed. You should only click "submit" when you are completely finished with the question and ready to submit your answer. You are only allowed 2 attempts.
+
+ 
+
+For this assignment, you will be evaluating Warren Buffett’s performance as CEO of Berkshire Hathaway. (See the Buffets Alpha article in Module 8 pre-readings for more information)
+
+ 
+
+Use the factors.csv dataset to answer the following questions.
+
+ 
+
+When reading this dataset into R, if the column names return strange characters you may need to specify the 'file-encoding' argument in the read.csv() function.
+
+Ex: read.csv(file_path, fileEncoding = "UTF-8-BOM").
+
+ 
+
+The dataset contains the following columns:
+
+Date: Calendar Month
+BRKret: Berkshire Hathaway’s monthly return
+MKT: Monthly return on the aggregate stock market
+RF: Risk Free rate
+Brk_exret: Berkshire Hathaway return in excess of the risk free rate
+Mkt_rf: Market return in excess of risk free rate
+SMB: Size Factor
+HML: Value Factor
+QMJ: Quality Factor
+BAB: Betting against beta factor
+MOM: Momentum factor
+Good luck!
+
+```{r}
+berk = read.csv("factors.csv")
+berk$Date = mdy(berk$Date)
+
+```
+
+
+Instructions 1-2
+Estimate a one factor model by regressing Berkshire Hathaway's return in excess of the risk free rate on the market excess return.
+## 1
+The regression intercept (i.e. Jensen's Alpha) is:
+
+```{r}
+model1 <- lm(Brk_exret~ Mkt_rf, data=berk)
+summary(model1)
+```
+
+# Instructions 3-6
+Estimate a three factor model by regressing Berkshire Hathaway’s return in excess of the risk free rate on MKT-rf; SMB; and HML.
+
+```{r}
+model2 <- lm(Brk_exret~ Mkt_rf+SMB+HML, data=berk)
+summary(model2)
+```
+
+# Instructions 7-10
+Now estimate a six factor model by regressing Berkshire Hathaway’s return in excess of the risk free rate on MKT-rf; SMB; HML; MOM; BAB; and QMJ.
+
+```{r}
+model3 = lm(Brk_exret ~ Mkt_rf + SMB + HML + Mom + BAB + QMJ, data = berk)
+summary(model3)
+```
+
