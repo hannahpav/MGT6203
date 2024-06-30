@@ -1,0 +1,178 @@
+---
+title: "HW3"
+output: html_document
+date: "2024-06-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+## saferead
+
+```{r saferead}
+# The safe_read_csv function is used for checking datasets.
+safe_read_csv <- function(file_path, stringsAsFactors = TRUE) {
+    result <- tryCatch({
+        data <- read.csv(file_path, stringsAsFactors = stringsAsFactors)
+        mes <- paste(file_path, " successfully read.")
+        print(mes)
+        return(data)
+      }, warning = function(w) {
+    # Warning Message
+        message("Warning: ", conditionMessage(w))
+        message("Using alternative file path.")
+        # Use regular expression to get file name after last slash
+        file_name <- sub("^.*/", "", file_path) 
+        # See if file in first layer of working directory.
+        # If not, student can easily upload it to Vocareum directory.
+        result <- read.csv(file_name, stringsAsFactors = stringsAsFactors)
+        print("Alternate path successful")
+        return(result)
+    }, error = function(e) {
+    # If neither method was successful
+        message("Error: ", conditionMessage(e))
+        print("Please upload data to Vocareum")
+      }, finally = {
+        ## This message appears regardless of whether an error appears
+        final_mes <- paste("If ", file_path, " not found, please notify us in Piazza. Thank you.")
+        print(final_mes)
+    }) 
+    return(result)
+}
+```
+
+```{r}
+personal_tiingo_api_key = '75b478897440f63dfd9ed6915f72f30e832defb0'
+tiingo_api_key(personal_tiingo_api_key)
+```
+
+
+## Instructions for Question 1 (16 Points)
+For Question 1, the goal is to use the data to construct a three-factor model. We'll do this by looking at how returns for UPS and KO, after accounting for the risk-free rate, relate to three factors—Mkt_RF, SMB, and HML—during our study period. Specifically, you will employ regression analysis to conduct factor investing for UPS and KO stocks.
+
+### Please use the dataset 'UPS_KO.csv' to answer the following questions.
+The data set contains the following columns:
+
+Date: This column represents date from 09/2014 to 08/2019.
+Mkt_RF: This column represents market premium (i.e., Market return – risk_free rate).
+SMB: This column represents the value of the size factor.
+HML: This column represents the value of the value factor.
+RF: This column represents risk free rate.
+UPS: This column represents the daily return of UPS.
+KO: This column represents the daily return of KO.
+Sample Period : 04/2015 to 11/2018 (Inclusive)
+
+```{r loaddata}
+# Load the data and necessary library
+suppressPackageStartupMessages(library(dplyr))
+library(dplyr)
+
+# Read the dataset
+# data_Q1 <- read.csv("data/UPS_KO.csv")
+data_Q1 <- safe_read_csv("data/UPS_KO.csv")
+
+
+```
+## A. Using the dataset named filtered_df provided above, fit a factor regression model for UPS over the sample period using Mkt_RF, SMB, and HML (6 points).
+Report each of the coefficients and interpret each variable (including intercept) according to their financial interpretation AND taking statistical significance into account at alpha=0.1.
+
+```{r}
+
+model1 = lm(UPS~ Mkt_RF + SMB + HML, data = filtered_df)
+summary(model1)
+
+```
+The intercept is close to zero at -7.249e-05 and negative, which would mean that the UPS fund slightly underperformed in relation to the market. However, because this intercept in not significantly significant, no conclusion can be made about the overall performance in relation to the market.
+
+Mkt_RF of 1.065 is the only variable that is stastically significant in this model at level 0.01%. The 1.065 means that the beta is 1.065, meaning UPS is slightly more volatile than the market.
+
+The positive coefficient 4.331e-02 on SMB would indicate that UPS is tilted toward small cap stocks. However, this variable is not statistically significant in the model, so no conclusion can be reached.
+
+A positive coefficient on HML would indicate that the UPS fund is titled toward value stocks. The coefficient is not statistically significant at a 0.1% level, so no conclusion can be reached.
+
+## B. Using the dataset named filtered_df provided above, fit a factor regression model for KO over the sample period using Mkt_RF, SMB, and HML (6 points).
+Report each of the coefficients (including intercept) and interpret each according to their financial interpretation AND taking statistical significance into account at alpha=0.1
+
+
+
+```{r}
+
+model2 = lm(KO~ Mkt_RF + SMB + HML, data = filtered_df)
+summary(model2)
+
+```
+The intercept is positive, which would mean that KO fund overperformed in relation to the market. However, because this intercept in not significantly significant, no conclusion can be made about the overall performance in relation to the market.
+
+Mkt_RF of 0.460956 is stastically significant in this model at level 0.01%. The 0.460956 means that the beta is 0.460956, meaning KO is slightly more volatile than the market.
+
+The negative coefficient -0.799243 on SMB indicates that UPS is tilted toward large cap stocks. The variable is statistically significant at a 0.05% level, so the interpretation holds.
+
+A positive coefficient on HML would indicate that the UPS fund is titled toward value stocks. The coefficient is not statistically significant at a 0.1% level, so no conclusion could be reached.
+
+## C. Based on Warren Buffett's investment philosophy discussed in our course readings, which company is he more likely to invest in according to these factor model outputs? (4 points)
+
+He would prefer KO because it has a low beta, and Buffet prefers to invest in low-risk stocks, or "safe" stocks.
+Buffet also prefers value stocks or "cheap" stocks, which are indicated by a positive HML coefficient. For both KO and UPS, the coefficients are positive, with KO at a higher coefficient than UPS. However, neither coefficient is statistically significant, so HML is not a good measurement for his choice.
+Lastly, he prefers profitable stocks, which is indicated by coefficient QMJ. which is not included in this model.
+
+Ultimately, Buffer would prefer KO because of its low risk.
+
+# Instructions for Question 2 (32 Points)
+For Question 2, you will use logistic regression to segment customers into two classes. This question is adapted from a Kaggle contest to evaluate current customers for an auto dealership that is opening a new location. The dealership wishes to reliably segment customers in order to streamline marketing efforts when their new location opens.
+
+The data for these questions is contained in the file, auto_customers_two_segments.csv, which includes the following fields:
+
+ID : Unique ID created by dealership (Removed from data_Q2)
+Gender : Gender of the customer
+Ever_Married : Marital status of the customer
+Age : Age of the customer
+Graduated : Is the customer a college graduate?
+Profession : Profession of the customer
+Work_Experience : Work experience in years
+Spending_Score : Spending score of the customer.
+Family_Size : Number of family members (including customer)
+Segmentation : The marketing segment the customer is in.
+
+```{r}
+# Load necessary library and data
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(knitr))
+library(caret)
+
+#load data from file
+data_Q2 = safe_read_csv('../resource/asnlib/publicdata/auto_customers_two_segments.csv')
+head(data_Q2 )
+```
+
+## A. Follow the steps below to clean the data set and answer the question. (4 Points)
+Remove all rows with n/a values.
+Remove all rows with data points that are blank (these are "" values that have a string length of 0). You can use dplyr or other methods to complete this step. (HINT: the cleaned sample size is 3400)
+What are the customer segment labels (Segmentation column) and how many customers are in each segment?
+
+```{r}
+# Format the data
+data_Q2 <- data_Q2 %>% mutate(Date = as.Date(paste0(Date, "01"), format = "%Y%m%d"))
+
+# Define the start and end dates for filtering
+start_date <- as.Date("2015-04-01")
+end_date <- as.Date("2018-11-30")
+
+# Filter the dataframe based on the date range
+filtered_df <- data_Q2 %>%
+  filter(Date >= start_date & Date <= end_date) %>% 
+  arrange(Date)
+
+filtered_df$UPS_RF <- filtered_df$UPS - filtered_df$RF
+filtered_df$KO_RF <- filtered_df$KO - filtered_df$RF
+
+
+tail(filtered_df)
+```
+
