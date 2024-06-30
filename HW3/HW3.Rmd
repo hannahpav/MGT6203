@@ -75,10 +75,26 @@ suppressPackageStartupMessages(library(dplyr))
 library(dplyr)
 
 # Read the dataset
-# data_Q1 <- read.csv("data/UPS_KO.csv")
-data_Q1 <- safe_read_csv("data/UPS_KO.csv")
+# data_Q1 <- read.csv("../resource/asnlib/publicdata/UPS_KO.csv")
+data_Q1 <- safe_read_csv("../resource/asnlib/publicdata/UPS_KO.csv")
+
+# Format the data
+data_Q1 <- data_Q1 %>% mutate(Date = as.Date(paste0(Date, "01"), format = "%Y%m%d"))
+
+# Define the start and end dates for filtering
+start_date <- as.Date("2015-04-01")
+end_date <- as.Date("2018-11-30")
+
+# Filter the dataframe based on the date range
+filtered_df <- data_Q1 %>%
+  filter(Date >= start_date & Date <= end_date) %>% 
+  arrange(Date)
+
+filtered_df$UPS_RF <- filtered_df$UPS - filtered_df$RF
+filtered_df$KO_RF <- filtered_df$KO - filtered_df$RF
 
 
+tail(filtered_df)
 ```
 ## A. Using the dataset named filtered_df provided above, fit a factor regression model for UPS over the sample period using Mkt_RF, SMB, and HML (6 points).
 Report each of the coefficients and interpret each variable (including intercept) according to their financial interpretation AND taking statistical significance into account at alpha=0.1.
@@ -147,7 +163,7 @@ suppressPackageStartupMessages(library(knitr))
 library(caret)
 
 #load data from file
-data_Q2 = safe_read_csv('../resource/asnlib/publicdata/auto_customers_two_segments.csv')
+data_Q2 = safe_read_csv('data/auto_customers_two_segments.csv')
 head(data_Q2 )
 ```
 
@@ -157,22 +173,183 @@ Remove all rows with data points that are blank (these are "" values that have a
 What are the customer segment labels (Segmentation column) and how many customers are in each segment?
 
 ```{r}
+
 # Format the data
-data_Q2 <- data_Q2 %>% mutate(Date = as.Date(paste0(Date, "01"), format = "%Y%m%d"))
+filtered_q2 <- data_Q2 %>% drop_na() %>%
+  filter_all(all_vars(str_length(as.character(.)) != 0))
 
-# Define the start and end dates for filtering
-start_date <- as.Date("2015-04-01")
-end_date <- as.Date("2018-11-30")
-
-# Filter the dataframe based on the date range
-filtered_df <- data_Q2 %>%
-  filter(Date >= start_date & Date <= end_date) %>% 
-  arrange(Date)
-
-filtered_df$UPS_RF <- filtered_df$UPS - filtered_df$RF
-filtered_df$KO_RF <- filtered_df$KO - filtered_df$RF
-
-
-tail(filtered_df)
+length(filtered_q2$Age)
 ```
 
+```{r}
+filtered_q2 %>% group_by(Segmentation) %>% count()
+```
+
+There are two groups, A and B. There are 1628 customers in A and 1772 customers in B
+
+#B. Create a logistic regression model using Segmentation as the response variable and all other variables as the predictors. (4 Points)
+Segment A represents the most desirable customers
+Segment B represents customers who have made purchases, but are not as likely to have a high or average spending score.
+HINT: You need to specify Segment B as a reference level by setting Segment B to 0 and Segment A to 1.
+
+```{r}
+
+filtered_q2$Segmentation <- ifelse(filtered_q2$Segmentation == "A", 1, 0)
+
+model3 <- glm(Segmentation ~., data = filtered_q2, family = 'binomial')
+summary(model3)
+
+```
+
+## C. Use the cleaned data set for both training and testing data and make predictions of the probability for each customer. (4 Points)
+For simplicity, we are using the same dataset for both training and testing.
+Display the first 5 values. Note: round your results to three decimal places, e.g., XX.xxx.
+HINT: You can use the predict() function on the model with the dataset to generate a vector of probability predictions.
+
+```{r}
+filtered_q2$model_prob <- predict(model3, filtered_q2[,-9], type = "response")
+
+head(round(filtered_q2$model_prob,3), 5)
+```
+
+The first five values for probabilities of customers are: 0.052, 0.174, 0.821, 0.579, 0.046.
+
+## D. Predict the accuracy of the model for each of the following cutoff probability values. (4 Points)
+Classify each predicted value as 1 (representing Segment A) or 0 (representing Segment B), using the following cutoff probability values: 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8.
+Calculate accuracy:
+Accuracy=(TP+TN)(TP+TN+FP+FN)
+ 
+Round your results to three decimal places, e.g., XX.xxx.
+Note: You will need to calculate the accuracy seven times, once for each cutoff value.
+
+```{r}
+library(xtable)
+cut_list = list(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8)
+accuracy_list = list()
+
+for (cut in cut_list) {
+filtered_q2_1 <- filtered_q2 %>% 
+  mutate(model_predict = case_when(filtered_q2$model_prob>cut~1,TRUE~0))
+
+filtered_q2_1 <- filtered_q2_1 %>% 
+  mutate(Segmentation = as.factor(Segmentation)) %>%
+  mutate(model_predict = as.factor(model_predict))
+
+Confusion_mat = caret::confusionMatrix(filtered_q2_1$model_predict, filtered_q2_1$Segmentation ,positive='1')
+
+accuracy_list = append(accuracy_list, round((Confusion_mat$overall[[1]]),4))
+
+}
+
+cutoff_table = data.frame('cutoff' = (unlist(cut_list)), 'accuracy'= unlist(accuracy_list))
+xtable(cutoff_table, type='latex')
+cutoff_table %>% mutate(accuracy = round(accuracy,3))
+
+```
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrr}
+  \hline
+ & cutoff & accuracy \\ 
+  \hline
+1 & 0.20 & 0.69 \\ 
+  2 & 0.30 & 0.73 \\ 
+  3 & 0.40 & 0.75 \\ 
+  4 & 0.50 & 0.76 \\ 
+  5 & 0.60 & 0.74 \\ 
+  6 & 0.70 & 0.70 \\ 
+  7 & 0.80 & 0.62 \\ 
+   \hline
+\end{tabular}
+\end{table}
+
+## E. Which cutoff probability value ryields the highest accuracy for the model? What is the accuracy as a percentage? (4 Points)
+Round percentages to two decimal places, for example, 80.51%
+
+```{r}
+cutoff_table[which.max(cutoff_table$accuracy),]
+```
+
+The highest accuracy is at cutoff 0.5 with 75.74% accuracy
+
+## F. Now we have developed a model and found the model that produces the highest accuracy. Create a confusion matrix using predictions from the optimal cutoff probability value above. (4 Points)
+HINT: You may use the caret package function, confusionMatrix() to automate this process
+
+```{r}
+filtered_q2_2 <- filtered_q2 %>% 
+  mutate(model_predict = case_when(filtered_q2$model_prob>.5~1,TRUE~0))
+
+filtered_q2_2 <- filtered_q2_2 %>% 
+  mutate(Segmentation = as.factor(Segmentation)) %>%
+  mutate(model_predict = as.factor(model_predict))
+
+Confusion_mat_opt = caret::confusionMatrix(filtered_q2_2$model_predict, filtered_q2_2$Segmentation ,positive='1')
+
+Confusion_mat_opt$table
+
+```
+## G. Report the accuracy, sensitivity and specificity of the chosen model as percentages. (4 Points)
+Round percentages to two decimal places, for example, 80.51%
+
+```{r}
+accuracy = round(100*Confusion_mat_opt$overall[[1]],2)
+sensitivity = round(100*Confusion_mat_opt$byClass[[1]],2)
+specificity = round(100*Confusion_mat_opt$byClass[[2]],2)
+
+setNames(data.frame(c('accuracy', 'sensitivity', 'specificity'), c(accuracy, sensitivity, specificity)), c('measure', 'value'))
+
+```
+
+## H. Evaluate your model. (4 Points)
+After you shared your results with the auto dealership's leadership team, they expressed concerns about the high number of customers from Segment A being misclassified as Segment B.
+
+Please address the following specific questions:
+
+Why is misclassifying Segment A customers as Segment B problematic? What implications does this have?
+How would you adjust your model to more accurately classify Segment A customers?
+What are the potential downsides of making these adjustments to your model?
+
+# Instructions for Question 3 (12 points)
+Company ABC is investing in Facebook, Pinterest, Twitter, and online display advertising to boost sales.
+To evaluate the effectiveness of their marketing budget, we are tasked with developing a straightforward Media Mix Model using linear regression methods.
+
+The data for these questions is contained in the file, mmmdata.csv, which includes the following fields:
+
+Date : Date.
+Sales : Sales of Company ABC.
+Facebook : Marketing spending on Facebook.
+Pinterest : Marketing spending on Pinterest.
+Twitter : Marketing spending on Twitter.
+Online_Display : Marketing spending on Online_Display.
+
+```{r}
+## Load dataset 
+data_Q3 = safe_read_csv("data/mmmdata.csv", stringsAsFactors = FALSE)
+
+## AdStock Terms
+data_Q3$Facebook.adstock <- as.numeric(stats::filter(x= data_Q3$Facebook , filter =0.3 , method ="recursive"))
+data_Q3$Pinterest.adstock <- as.numeric(stats::filter(x= data_Q3$Pinterest , filter =0.2 , method ="recursive"))
+data_Q3$Twitter.adstock <- as.numeric(stats::filter(x= data_Q3$Twitter , filter =0.7 , method ="recursive"))
+data_Q3$Online_Display.adstock <- as.numeric(stats::filter(x= data_Q3$Online_Display , filter =0.5 , method ="recursive"))
+
+head(data_Q3)
+```
+
+## A. Please develop the following model. (4 points)
+Model 1 : Regress Sales on Company ABC’s Facebook, Pinterest, Twitter, and Online Display spending.
+
+```{r}
+model4 = lm(Sales ~ Facebook + Pinterest + Twitter + Online_Display, data = data_Q3)
+summary(model4)
+
+```
+
+## B. Please develop the following model. (4 points)¶
+Model 2 : Regress Sales on the adstock terms defined in the instruction. DO NOT make any changes to the .adstock variables. ONLY include the .adstock variables listed in your analysis.
+
+```{r}
+model5 = lm(Sales ~ Facebook.adstock + Pinterest.adstock + Twitter.adstock + Online_Display.adstock, data = data_Q3)
+summary(model5)
+```
+
+## C. Explain which model best explains the data and why? (4 points)
