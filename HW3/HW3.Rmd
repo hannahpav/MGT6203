@@ -235,7 +235,7 @@ filtered_q2_1 <- filtered_q2_1 %>%
   mutate(Segmentation = as.factor(Segmentation)) %>%
   mutate(model_predict = as.factor(model_predict))
 
-Confusion_mat = caret::confusionMatrix(filtered_q2_1$model_predict, filtered_q2_1$Segmentation ,positive='1')
+Confusion_mat = caret::confusionMatrix(filtered_q2_1$model_predict, filtered_q2_1$Segmentation ,positive='0')
 
 accuracy_list = append(accuracy_list, round((Confusion_mat$overall[[1]]),4))
 
@@ -309,6 +309,13 @@ Why is misclassifying Segment A customers as Segment B problematic? What implica
 How would you adjust your model to more accurately classify Segment A customers?
 What are the potential downsides of making these adjustments to your model?
 
+### Answer
+Misclassifying Segment A customers as Segment B too often means that when true value = 1, model is predicting value = 0, which is a false negative, which means that the model has low sensitivity. This means that the model is failing to identify Segment A. From a sales perspective, Segment A could be repeatedly getting Segment B's advertisement. If Segment A is the segment that does more purchasing, that means that the company is losing sales.
+
+To adjust the model to more accurately classify Segment A customers, we could decrease the threshold value p=0.5. By decreeasing this, more instances are predicted as positive (1), thus increasing the number of Segment A's predicted.
+
+When adjusting the threshold, one must be accurate to not lower the threshold so much that the accuracy suffers. The model built in this question is optimized for accuracy. If we were to change the threshold, the accuracy would be less. The user would have to decide which was more important, the sensitivity or the accuracy.
+
 # Instructions for Question 3 (12 points)
 Company ABC is investing in Facebook, Pinterest, Twitter, and online display advertising to boost sales.
 To evaluate the effectiveness of their marketing budget, we are tasked with developing a straightforward Media Mix Model using linear regression methods.
@@ -353,3 +360,11 @@ summary(model5)
 ```
 
 ## C. Explain which model best explains the data and why? (4 points)
+
+Model2, which is regressed on adstock terms, best explains the model. 
+The ad stock variable is created by computing the exponential decay of the impressions  on each day and then summing up the total "stock" from impressions on previous days. Basically, it describes the prolonged or lagged effect of advertising on consumer purchase behavior. 
+The ad stock model, then take into account the decay over time that ads have. For this reason, the model can capture effect from ads that may have a lag time.
+Because of the time-dependent nature of the model and historical context, it can improve forecasting accuracy.
+The model is also more effective at investigating the relationship between total sales and advertising channels, which may be lost in the raw data, allowing for a synergistic model.
+
+From a completely non-adstock perspective, the adjusted R-squared for the adstock model is slightly higher than that of the raw data model, indicating the adstock model better explains the response.
