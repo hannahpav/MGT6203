@@ -147,19 +147,40 @@ NOte: use all data points to calculate standard deviation.
 
 ```{r}
 # Calculate Cp
-upper_spec = [30,35]
-lower_spec = [50,45]
+upper_spec = list(30,35)
+lower_spec = list(50,45)
 
-cp_frame = 
+Stdv = sd(as.matrix(data_q1[,3:10]))
+
+cp_frame = data.frame(Cp = numeric(2), Cpk = numeric(2), row.names=c("original","narrow"))
 
 for(i in list(1,2)){
-  
+  Cpi = (upper_spec[[i]] - lower_spec[[i]])/(6*Stdv)
+  Cpki = min(((upper_spec[[i]] - X_dbl_bar)/(3*Stdv)), ((X_dbl_bar - lower_spec[[i]])/(3*Stdv)))
+  cp_frame[i] = c(Cpi, Cpki)
 }
-Cp = (upper_spec - lower_spec)/(6*Stdv)
-Cp
 
-# Calculate Cpk
-Cpk = min(((upper_spec - X_dbl_bar)/(3*Stdv)), ((X_dbl_bar - lower_spec)/(3*Stdv)))
-Cpk
+cp_frame
+
+```
+
+##Question 2 (20 points)
+You have recently started your role as the Transportation Director in Mountainside Village, which has only one road for entering and exiting. During peak hours, traffic can reach up to 35 cars per hour, and it takes about 1 minute to drive this road without traffic.
+
+###A. Given that the car arrivals are Poisson-distributed and the drive times are exponential, calculate the current utilization rate of the road. (4 points)
+
+```{r}
+
+lambda = 35
+mu = 60
+
+util = 35/60
+util
+
+```
+### B. Given the current traffic conditions, what is the probability that 18 cars will arrive within a 20-minute period?(4 points)
+
+```{r}
+
 ```
 
