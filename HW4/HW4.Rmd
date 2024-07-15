@@ -69,7 +69,7 @@ Note: Use the following values: A_2 = 0.373, D_3 = 0.136, D_4 = 1.864.
 
 ```{r}
 
-data_q1$X_bar = rowMeans(data_q1[,-1])
+data_q1$X_bar = rowMeans(data_q1[,3:10])
 data_q1$R = apply(data_q1[,3:10], 1, max)-apply(data_q1[,3:10], 1, min)
 
 # Calculate X-double-bar and R-bar.
@@ -89,7 +89,7 @@ Stdv
 ```{r}
 
 
-# Look up control chart constants for n=5 observations.
+# control chart constants
 A_2 = 0.373
 D_4 = 1.864
 D_3 = 0.136
@@ -111,10 +111,10 @@ data.frame(control.limits, values)
 ```
 
 The control limits are as follows:
-UCLx	42.584162			
-LCLx	7.228946			
+UCLx	39.417750			
+LCLx	4.062534			
 UCLr	88.340647			
-LCLr	6.445455			
+LCLr	6.445455				
 
 ### B. Plot X-Bar and R-Bar charts, ensuring that the Upper Control Limit (UCL) and Lower Control Limit (LCL) are clearly indicated on each graph. (8 points)
 Identify any points that fall outside the control limits on both the X-Bar and R-Bar(range) charts. Discuss what it means for a point to fall outside the control limits.
@@ -140,29 +140,43 @@ data_q1$X_bar[above]
 above
 
 ```
-Dates 21 and 40 have values that are above the UCLx line at 43.325 and 45.430.
+## ANSWER 
+Evaluate whether the cement production process is in control based on the control charts.
+
+The R-Bar chart has all values within the limits, thus it is in control. This means it's only exhibiting common causes of variation.
+
+The X-bar chart has two points falling above the control limit UCL: dates 21 at 41.181 and 40 at 44.767 The process is out of control, meaning there are assignable causes of variation present.
+
+The cement production process is out of control because two points are above the UCLx limit.
 
 ### C. If the specification limits were narrowed (e.g., from 30-50 MPa to 35-45 MPa), how would this impact the Cp and Cpk values? What would be the implications for the process? (4 points)
 NOte: use all data points to calculate standard deviation.
 
 ```{r}
 # Calculate Cp
-upper_spec = list(30,35)
-lower_spec = list(50,45)
+lower_spec = list(30,35)
+upper_spec = list(50,45)
 
 Stdv = sd(as.matrix(data_q1[,3:10]))
 
-cp_frame = data.frame(Cp = numeric(2), Cpk = numeric(2), row.names=c("original","narrow"))
+cp_frame = data.frame(Cp = numeric(), Cpk = numeric())
 
 for(i in list(1,2)){
   Cpi = (upper_spec[[i]] - lower_spec[[i]])/(6*Stdv)
+  print(Cpi)
   Cpki = min(((upper_spec[[i]] - X_dbl_bar)/(3*Stdv)), ((X_dbl_bar - lower_spec[[i]])/(3*Stdv)))
-  cp_frame[i] = c(Cpi, Cpki)
+  new_row <- data.frame('Cp'=Cpi, 'Cpk'=Cpki)
+  cp_frame = rbind(cp_frame, new_row)
 }
 
+row.names(cp_frame) <- c('original','narrow')
 cp_frame
 
 ```
+## Answer
+Cp is the process capability ratio. With the original window, the CP is less than one, indicating the process is not capable of meeting the upper and lower specification. When the window is more narrow, the value of Cp decreases, meaning that the process is LESS capable of meeting the upper and lower specification, due to the tightened restrictions.
+
+Process capability index, Cpk, gives the proprtion of variation between teh center of hte process and the upper and lower spec. Values for both the original and more narrow margins are less than 1, meaning the process is not capable of meeting the requirement. Due to just common causes of variation, the process is going to create product that is outside your specifications. The value of Cpk is lower in the narrower margin, meaning it is LESS capable of meeting the requirement. It may indicate that just from common causes, the product will fall outside specifications.
 
 ##Question 2 (20 points)
 You have recently started your role as the Transportation Director in Mountainside Village, which has only one road for entering and exiting. During peak hours, traffic can reach up to 35 cars per hour, and it takes about 1 minute to drive this road without traffic.
@@ -174,13 +188,64 @@ You have recently started your role as the Transportation Director in Mountainsi
 lambda = 35
 mu = 60
 
-util = 35/60
-util
+rho = lambda/mu
+rho
 
 ```
+## Answer
+The current utlization rate is 0.583.
+
 ### B. Given the current traffic conditions, what is the probability that 18 cars will arrive within a 20-minute period?(4 points)
 
 ```{r}
+P18 = (((lambda*(1/3))**18)*exp(-lambda*(1/3)))/factorial(18)
+P18
+```
+## Answer
+The probability that exactly 18 cars will arrive within a 20 minute period is 0.0215 or 2.15%.
+
+### C. Assuming the traffic flow increases to 45 cars per hour during peak periods, how does the new utilization rate compare to the previous rate? (4 points)
+
+```{r}
+lambda2 = 45
+
+rho2 = lambda2/mu
+rho2
+```
+## Answer
+The new utilization rate is 0.75 or 75%, which is much higher than the utilization rate with 35 cars/hour.
+
+### D. Create a graph to show how the time it takes to travel increases as more cars are on the road. (4 points)¶
+Hint: Construct a graph to illustrate the relationship between the number of cars per hour (X-axis), ranging from 35 to 45, and the corresponding time spent on the road (Y-axis).
+
+```{r}
+cars_per_hour = 35:45
+
+time_on_road = list()
+
+for(i in cars_per_hour){
+  Ws = 1/(mu-i)
+  time_on_road = append(time_on_road,Ws*60)
+}
+time_on_road = unlist(time_on_road)
+ggplot(mapping = aes(cars_per_hour, time_on_road))+geom_point() + geom_line()
 
 ```
+
+## Answer
+The graph above shows that an increase in the cars per hour results in a non-linear increase on the time on road.
+
+### E. A new traffic light has been installed, extending the travel time across the road to 10 minutes. Calculate the average number of cars present on the road at any given time. (4 points)
+Note: Use the original arrival rate 35 cars/hour.
+
+```{r}
+newmu = 6
+
+cars_on_road = lambda/(newmu - lambda)
+cars_on_road
+
+```
+## Answer
+With the new traffic light, there are more cars entering the system than the road can handle, seen as the utilization rate is 5.83, indicating an overloaded and unstable state. The value for $L_s$ is -1.21. This is not a practical system for this road.
+
 
