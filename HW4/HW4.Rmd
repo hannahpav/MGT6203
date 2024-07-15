@@ -249,3 +249,93 @@ cars_on_road
 With the new traffic light, there are more cars entering the system than the road can handle, seen as the utilization rate is 5.83, indicating an overloaded and unstable state. The value for $L_s$ is -1.21. This is not a practical system for this road.
 
 
+## Question 3 (20 points)
+The dataset store_sales.csv comprises a subset of data collected from a U.S.-based retailer between 2010 and 2012. It details weekly sales figures, with each row representing a distinct week of data for a specific store and department.
+
+Notes: The dataset includes periods from 2010 to 2012, but it does not cover every week. Do NOT extrapolate to fill in the missing weeks unless specifically instructed, as it will alter the results. Assume we are using the full dataset for most of the questions.
+
+store: store location id
+dept: store department id
+date: first day of given week
+weekly_sales: sales for that week, dept, store
+isholiday: binary variable, true indicates a holiday week.
+
+```{r}
+## Load necessary library and dataset
+library(dplyr)
+library(xts) 
+library(forecast) 
+library(lubridate) 
+# data <-read.csv("../resource/asnlib/publicdata/store_sales.csv", stringsAsFactors = FALSE) 
+data <-safe_read_csv("store_sales.csv", stringsAsFactors = FALSE) 
+names(data) <- tolower(names(data))
+head(data)
+```
+
+###A. What is the average value of weekly_sales for dept 1 when there is no holiday? (2 points)
+Round your answer to the nearest dollar (e.g., $64.5 rounds up to $65, while $64.49 rounds down to $64).
+
+```{r}
+
+dept1 = data[data$dept == 1,]
+dept1_average_weekly_sales = mean(dept1[dept1$isholiday==FALSE,]$weekly_sales)
+round(dept1_average_weekly_sales)
+
+```
+## Answer
+The average weekly sales for dept 1 is $19903 when there is no holiday.
+
+###B. Compute the total sales (sum of weekly_sales across all departments) per week for store 1. Use an alpha of 0.5 and h = 100, and apply the ses() function from the 'forecast' package to fit the data. Plot the model, ensuring that holidays are not excluded. What do you observe in the graph? (4 points)
+Note: You will need to convert the dataframe to an xts object.
+
+Follow these steps:
+
+Make all dates to the same format. Hint: use the format parse_date_time(data_columns, c(datetype1, datetype2)).
+Convert the dataframe to xts.
+Fit the ses() model
+
+```{r}
+data <-safe_read_csv("store_sales.csv", stringsAsFactors = FALSE) 
+names(data) <- tolower(names(data))
+## date format
+data$date = parse_date_time(data$date, orders = 'mdy')
+
+```
+
+
+```{r}
+library(scales)
+
+## store1 sales
+store1 = data[data$store==1,]
+store1_sale = store1 %>%
+  group_by(date) %>%
+  summarise(weekly_sales = sum(weekly_sales))
+
+## fit the data
+## Convert to time-series
+dept1_sum_weekly_sales = xts(store1_sale$weekly_sales, order.by = as.Date(store1_sale$date))
+
+# Create model. h is the number of periods to forecast
+store1_fit = ses(dept1_sum_weekly_sales, alpha=0.5, h=100)
+
+# Plot model
+
+my_date_transform <- function(x) {format(as.Date(x)+14645, "%m/%d/%Y")}
+
+autoplot(store1_fit) + scale_x_continuous(labels = my_date_transform, n.breaks=15) +  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+## Answer
+
+First looking at the historical data, the sale levels are mainly consistent large spikes around Thanksgiving and Christmas, corresponding with holiday shopping.There is a very slight increase towards the end, but it may not be enough to be wholly reliable.
+The larger forecasting shows uncertainty with the trend, with a stable mean. The deviation from mean to 80% percentile looks even for both positive and negative. Over time, the range of sales expands, showing the increasing in uncertainty as the date is farther from the last data point.
+
+
+###C. Using the same time series dataset from Q3(b), calculate and report the tracking signal for the models with alpha values of 0.25 and 0.75, with h=100. (4 points)¶
+Note: Use your model's fitted values (e.g., model[['fitted']]) as your forecasted values.
+
+```{r}
+
+```
+
