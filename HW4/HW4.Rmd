@@ -1,0 +1,165 @@
+
+To install a package that does not come with the provided environment, please use the following steps:
+
+Install your desired package using the following code:
+`install.packages("PackageName", lib="../work/")`
+Attach the library you just installed using the following code:
+`library(PackageName, lib.loc = "../work/")`
+**NOTE:** Make sure the file location is the same as the above code snippets `("../work/")`
+Instructions for using the safe_read_csv() function
+Purpose: The safe_read_csv() function is designed to verify the existence of datasets for specific questions.
+
+Execution:
+
+**Run the function to attempt loading the dataset into your Vocareum notebook.This function only needs to be run once each time you open the notebook** :
+If the dataset loads successfully, you will see a "...successfully read" message. Please proceed with the rest of the questions.
+If the dataset is missing, an error message stating "…not found…" will appear.Please report this issue by posting on Piazza so we can resolve it.
+
+
+```{r}
+# The safe_read_csv function is used for checking datasets.
+safe_read_csv <- function(file_path, stringsAsFactors = TRUE) {
+    result <- tryCatch({
+        data <- read.csv(file_path, stringsAsFactors = stringsAsFactors)
+        mes <- paste(file_path, " successfully read.")
+        print(mes)
+        return(data)
+      }, warning = function(w) {
+    # Warning Message
+        message("Warning: ", conditionMessage(w))
+        message("Using alternative file path.")
+        # Use regular expression to get file name after last slash
+        file_name <- sub("^.*/", "", file_path) 
+        # See if file in first layer of working directory.
+        # If not, student can easily upload it to Vocareum directory.
+        result <- read.csv(file_name, stringsAsFactors = stringsAsFactors)
+        print("Alternate path successful")
+        return(result)
+    }, error = function(e) {
+    # If neither method was successful
+        message("Error: ", conditionMessage(e))
+        print("Please upload data to Vocareum")
+      }, finally = {
+        ## This message appears regardless of whether an error appears
+        final_mes <- paste("If ", file_path, " not found, please notify us in Piazza. Thank you.")
+        print(final_mes)
+    }) 
+    return(result)
+}
+```
+
+## Question 1 (20 Points)
+ABC Lab, a manufacturer of cement, is currently developing a new production process. As part of this initiative, the lab routinely creates multiple cement samples daily to evaluate their strength. The provided dataset comprises the strength measurements (in MPa) of eight randomly selected samples from the production line, recorded daily over a period of 59 days. ABC Lab intends to utilize statistical control charts to determine whether the process remains within controlled parameters.
+
+Please use the 'concrete.csv' dataset for this analysis. The dataset includes these columns:
+
+Date: The sequential date identifier for each observation.
+Obs1 - Obs8: Measurement of strengths of the 8 randomly selected samples.
+
+```{r}
+## read dataset
+#data_q1 = read.csv("../resource/asnlib/publicdata/concrete.csv", stringsAsFactors = FALSE) 
+data_q1 = safe_read_csv("../resource/asnlib/publicdata/concrete.csv", stringsAsFactors = FALSE) 
+str(data_q1)
+head(data_q1)
+```
+
+### A. Calculate the following control limits: UCLx, LCLx, UCLr, LCLr (8 points)
+Note: Use the following values: A_2 = 0.373, D_3 = 0.136, D_4 = 1.864.
+
+```{r}
+
+data_q1$X_bar = rowMeans(data_q1[,-1])
+data_q1$R = apply(data_q1[,3:10], 1, max)-apply(data_q1[,3:10], 1, min)
+
+# Calculate X-double-bar and R-bar.
+X_dbl_bar = mean(data_q1$X_bar)
+R_bar = mean(data_q1$R)
+
+# Calculate standard deviation of all the observations
+Stdv = sd(as.matrix(data_q1[,3:10]))
+
+# Output values for reference
+X_dbl_bar
+R_bar
+Stdv
+```
+
+
+```{r}
+
+
+# Look up control chart constants for n=5 observations.
+A_2 = 0.373
+D_4 = 1.864
+D_3 = 0.136
+
+# Calculate the upper control limit and lower control limit for the X-bar chart. Calculate the Center of the two limits.
+UCLx = X_dbl_bar + (A_2 * R_bar)
+LCLx = X_dbl_bar - (A_2 * R_bar)
+CenterX = (UCLx+LCLx)/2
+
+# Calculate the upper control limit and lower control limit for the R chart. Calculate the Center of the two limits.
+UCLr = D_4 * R_bar
+LCLr = D_3 * R_bar
+CenterR = (UCLr+LCLr)/2
+
+# Output values for reference
+values <- c(UCLx, LCLx, UCLr, LCLr)
+control.limits <- c('UCLx', 'LCLx', 'UCLr', 'LCLr')
+data.frame(control.limits, values)
+```
+
+The control limits are as follows:
+UCLx	42.584162			
+LCLx	7.228946			
+UCLr	88.340647			
+LCLr	6.445455			
+
+### B. Plot X-Bar and R-Bar charts, ensuring that the Upper Control Limit (UCL) and Lower Control Limit (LCL) are clearly indicated on each graph. (8 points)
+Identify any points that fall outside the control limits on both the X-Bar and R-Bar(range) charts. Discuss what it means for a point to fall outside the control limits.
+Evaluate whether the cement production process is in control based on the control charts.
+
+```{r}
+## Plot the R Chart
+ggplot(data_q1, aes(x=Date, y=R)) + geom_point() + geom_line() + geom_line(aes(y=LCLr), color="blue") + geom_line(aes(y=UCLr), color="red") + geom_line(aes(y=CenterR), color="orange")+ ggtitle("R Chart")
+```
+
+```{r}
+sum(data_q1$R > UCLr)
+sum(data_q1$R < LCLr)
+```
+
+
+```{r}
+ggplot(data_q1, aes(x=Date, y=X_bar)) + geom_point() + geom_line() + geom_line(aes(y=LCLx), color="blue") + geom_line(aes(y=UCLx), color="red") + geom_line(aes(y=CenterX), color="orange") +ggtitle("X-Bar Chart")
+```
+```{r}
+above = which(data_q1$X_bar > UCLx)
+data_q1$X_bar[above]
+above
+
+```
+Dates 21 and 40 have values that are above the UCLx line at 43.325 and 45.430.
+
+### C. If the specification limits were narrowed (e.g., from 30-50 MPa to 35-45 MPa), how would this impact the Cp and Cpk values? What would be the implications for the process? (4 points)
+NOte: use all data points to calculate standard deviation.
+
+```{r}
+# Calculate Cp
+upper_spec = [30,35]
+lower_spec = [50,45]
+
+cp_frame = 
+
+for(i in list(1,2)){
+  
+}
+Cp = (upper_spec - lower_spec)/(6*Stdv)
+Cp
+
+# Calculate Cpk
+Cpk = min(((upper_spec - X_dbl_bar)/(3*Stdv)), ((X_dbl_bar - lower_spec)/(3*Stdv)))
+Cpk
+```
+

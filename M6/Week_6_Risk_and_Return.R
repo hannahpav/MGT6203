@@ -35,14 +35,15 @@ library(lubridate)
 #use getwd() to find out your working directory and setwd() to set it to any directory you want
 
 #load data and create xts dataset
-fund <- read.csv("contrafund.csv")
+#fund <- read.csv("contrafund.csv")
 #converting dates to standard YYYY-MM-DD format
+fund= contrafund
 fund$Date <- mdy(fund$Date)
 #Sorting data by dates
 fund2<- fund[order(fund$Date),]
 
 #create an xts dataset
-All.dat <- xts(fund2[,-1],order.by = fund2[,1],)
+All.dat <- xts(fund2[,-1],order.by = fund2$Date,)
 
 
 #Calculate Compound Return for the fund across all the data
