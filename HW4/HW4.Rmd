@@ -176,7 +176,7 @@ cp_frame
 ## Answer
 Cp is the process capability ratio. With the original window, the CP is less than one, indicating the process is not capable of meeting the upper and lower specification. When the window is more narrow, the value of Cp decreases, meaning that the process is LESS capable of meeting the upper and lower specification, due to the tightened restrictions.
 
-Process capability index, Cpk, gives the proprtion of variation between teh center of hte process and the upper and lower spec. Values for both the original and more narrow margins are less than 1, meaning the process is not capable of meeting the requirement. Due to just common causes of variation, the process is going to create product that is outside your specifications. The value of Cpk is lower in the narrower margin, meaning it is LESS capable of meeting the requirement. It may indicate that just from common causes, the product will fall outside specifications.
+Process capability index, Cpk, gives the proprtion of variation between the center of the process and the upper and lower spec. Values for both the original and more narrow margins are less than 0, meaning the process is not capable of meeting the requirement. Due to just common causes of variation, the process is going to create product that is outside your specifications. The value of Cpk is lower in the narrower margin, meaning it is LESS capable of meeting the requirement. It may indicate that just from common causes, the product will fall outside specifications.
 
 ##Question 2 (20 points)
 You have recently started your role as the Transportation Director in Mountainside Village, which has only one road for entering and exiting. During peak hours, traffic can reach up to 35 cars per hour, and it takes about 1 minute to drive this road without traffic.
@@ -337,5 +337,107 @@ Note: Use your model's fitted values (e.g., model[['fitted']]) as your forecaste
 
 ```{r}
 
+store1_25 = ses(dept1_sum_weekly_sales, alpha=0.25, h=100)
+store1_75 = ses(dept1_sum_weekly_sales, alpha=0.75, h=100)
+
+forecast_25 = store1_25$fitted
+forecast_75 = store1_75$fitted
+
+actual = store1_sale$weekly_sales
+
+tracking_signal <- function(forecasted_values, actual_values) {
+  errors <- forecasted_values - actual_values
+  MAD <- mean(abs(errors))
+  tracking_signal_value <- sum(errors) / MAD
+  return(tracking_signal_value)
+}
+
+ts_25 = tracking_signal(forecast_25, actual)
+ts_75 = tracking_signal(forecast_75, actual)
+
+paste('Alpha: 0.25 =', round(ts_25,3))
+paste('Alpha: 0.75 =', round(ts_75,3))
+
 ```
 
+## Answer
+
+The tracking signal is a measure of how often the estimations have been above or below the actual value. The tracking signal for alpha: 0.25 -> -1.044, and for alpha: 0.75 -> 1.652053. This means that for alpha=0.25, most actual values are BELOW the forcast becasue it is negative. For alpha:0.75, most actual values are ABOVE the forecast.
+
+### D. Using the same time series dataset from Q3(b), calculate and report the Mean Absolute Deviation (MAD) and Mean Forecast Error (MFE) for the models with alpha values of 0.25 and 0.75. (4 points)¶
+Note: Use you model's fitted values (e.g., model[['fitted']]) as your forecasted values.
+
+```{r}
+MAD <- function(forecasted_values, actual_values) {
+  errors <- forecasted_values - actual_values
+  mad <- mean(abs(errors))
+  return(mad)
+}
+
+MFE <- function(forecasted_values, actual_values) {
+  errors <- forecasted_values - actual_values
+  mfe <- sum(errors) / length(actual_values)
+  return(mfe)
+}
+
+mad_25 = MAD(forecast_25, actual)
+mad_75 = MAD(forecast_75, actual)
+
+mfe_25 = MFE(forecast_25, actual)
+mfe_75 = MFE(forecast_75, actual)
+
+paste('MAD, alpha: 0.25 =', round(mad_25))
+paste('MAD, alpha: 0.75 =', round(mad_75))
+paste('MFE, alpha: 0.25 =', round(mfe_25))
+paste('MFE, alpha: 0.75 =', round(mfe_75))
+
+```
+
+## Answer
+MAD is the average absolute error in the observation. MFE is the average error in the observation.
+MAD, alpha: 0.25 = 115457
+MAD, alpha: 0.75 = 118502
+MFE, alpha: 0.25 = -1030
+MFE, alpha: 0.75 = 1673
+
+### E. Based on your previous calculations, using the Tracking Signal, MAD, and MFE values for the models with alpha values of 0.25 and 0.75, determine which model performs better and explain why. (2 points)¶
+
+## Answer
+According to tracking signal, 0.25 performs better, as -1.044 is closer to zero than 1.652, and a perfect tracking signal is 0.
+According to MAD, 0.25 also performs better. A smaller value indicates smaller mean absolute deviation, the distance away from the actual value.
+According to MFE, 0.25 performs better. A value closer to 0 means less Mean Forecast Error, thus less error and a better model.
+Alpha=0.25 creates a better performing model becasue it outperforms alpha=0.75 by tracking signal, MAD, and MFE metrics.
+
+### F. Using the same time series dataset from Q3(b), calculate and plot the root mean squared error (RMSE) for alpha values ranging from 0.01 to 0.99 in increments of 0.01, with h=100. Identify the optimal alpha value that yields the lowest RMSE. (4 points)
+Note:
+
+Use the seq() function to generate a sequence of alpha values and loop through it to calculate RMSE.
+The MSE value can be obtained from your SES model using yourmodelname$model$mse.
+
+```{r}
+
+alphas = seq(.01,.99,.01)
+RMSE = list()
+
+for(i in alphas){
+  modeli = ses(dept1_sum_weekly_sales, alpha=i, h=100)
+  RMSEi = sqrt(modeli$model$mse)
+  RMSE = append(RMSE, RMSEi)
+}
+
+RMSE = unlist(RMSE)
+alpha_min = alphas[which.min(RMSE)]
+RMSE_min = min(RMSE)
+new_point = data.frame(alpha=alpha_min, RMSE=RMSE_min)
+
+ggplot(mapping = aes(x = alphas, y = RMSE)) +
+  geom_line() +
+  geom_point(data = new_point, aes(x = alpha, y = RMSE), color = 'red', size = 3) +
+  geom_text(data = new_point, aes(x = alpha, y = RMSE, label = paste("(",(alpha_min),",", round(RMSE_min),")")
+), color="red",vjust = -1.5, hjust = 0.2, size = 4) +
+  labs(x = "Alpha", y = "RMSE", title = "RMSE vs. Alpha for SES")
+
+```
+
+## Answer
+The optimal value of alpha is 0.08, which gives a RMSE of 165410.
