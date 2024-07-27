@@ -1,0 +1,210 @@
+# Question 7
+
+```{r}
+b0 = -4.0777 
+b1 = 1.5046 
+x=5
+numerator = exp(b0 + b1*x)
+denom = 1+numerator
+prob = numerator/denom
+prob
+```
+
+# Question 8
+
+```{r}
+riskfree = .07
+fundreturn=.2
+stdev_excess = .05
+beta = 0.7
+
+sharpe = (fundreturn - riskfree) / stdev_excess
+sharpe
+```
+
+# Question 12
+The new-accounts officer at the Buzz Bank enrolls all new customers in checking accounts. During the 3 week period in August encompassing the beginning of the new school year at GT, the bank opens a lot of new accounts for students. The bank estimates the arrival during this period will be Poisson distributed with an average of four students per hour. The service time is exponentially distributed with an average of 12 minutes per student to set up a new checking account. The bank wants to determine the operating characteristics for the system and determine if the current officer is sufficient to handle the increased traffic.
+
+Is 1 officer sufficient for this demand if the bank manager doesn't want a customer to wait more than 50 minutes to be served?
+
+```{r}
+# Arrival rate (customers per hour)
+lambda <- 4
+# Service rate (customers per hour)
+mu <- 5
+
+
+# Utilization (rho), fraction of time the server is busy
+rho <- lambda / mu
+# Average number in the system (L)
+L <- lambda / (mu - lambda)
+# Average time in the system (W) in hours
+W <- 1 / (mu - lambda)
+# Average number in the queue (Lq)
+Lq <- lambda^2 / (mu * (mu - lambda))
+# Average time in the queue (Wq) in hours
+Wq <- lambda / (mu * (mu - lambda))
+
+```
+
+# Question 13
+The manager of a grocery store in Decatur currently provides special service to people who still use checks to pay for food. They have a separate pay/bag line for people who insist on waiting for a dollar total to pull out their checkbook and start writing. On average, 30 customers per hour arrive at the checking pay/bag line and they can be modeled with a Poisson distribution. The clerk at this line can handle an average rate of 35 customers per hour and their service can be modeled with exponential distribution.
+
+What are the queue metrics of this system?
+
+```{r}
+# Arrival rate (customers per hour)
+lambda <- 30
+# Service rate (customers per hour)
+mu <- 35
+
+
+# Utilization (rho), fraction of time the server is busy
+rho <- lambda / mu
+# Average number in the queue (Lq)
+Lq <- lambda^2 / (mu * (mu - lambda))
+# Average time in the queue (Wq) in hours
+Wq <- lambda / (mu * (mu - lambda))
+# Average tim a customer spends in the system
+Ws <- 1/(mu - lambda)
+# Average # of customers in the system
+Ls <- lambda/(mu-lambda)
+
+(c(rho, Lq, Wq, Ls, Ws))
+
+```
+
+# Questions 18-20
+
+```{r}
+## Load necessary library and dataset
+library(dplyr)
+library(xts) 
+library(forecast) 
+library(lubridate) 
+data <- read.csv("KAG.csv ",stringsAsFactors = FALSE)   
+head(data)
+```
+
+# Question 18
+Of all the ads with more than 10,000 impressions, what percentage of these ads (with more than 10,000 impressions) were targeted at females?  Note:  Please round the answer to 2 decimal places.   
+
+```{r}
+
+data10000 <- data[data$Impressions>10000,]
+sum(data10000$gender=="F")/nrow(data10000)
+```
+# Question 19
+For the xyz_campaign_id “916”, what is the mean conversion rate? Here, the conversion rate for each ad id is defined as approved conversions / total conversions.  Please round your answer to three decimal place.  Note that Conversion rate is 0 where total conversion is 0 
+```{r}
+data916 <- data[data$xyz_campaign_id==916,]
+data916$Conversion_Rate = data916$Approved_Conversion / data916$Total_Conversion
+mean(data916$Conversion_Rate)
+```
+
+# Question 20
+Which of the following market segments has the highest average cost-per-click    
+Note: Average Cost-Per-Click = total spent/total clicks 
+
+```{r}
+
+grouped <- data %>% group_by(age, gender) %>%
+  summarise(Clicks = sum(Clicks))
+
+grouped2 <- data %>% group_by(age,gender) %>%
+  summarise(Spent = sum(Spent))
+
+grouped$Spent = grouped2$Spent
+grouped$CPC = grouped$Spent / grouped$Clicks
+grouped[which.max(grouped$CPC),]
+```
+
+# Questions 21-22
+Use the provided dataset Final_Exam_Factors.csvLinks to an external site. to construct factor regression models for NVDA and INTC. Construct a factor model for both NVDA and INTC using the Market excess return, SMB, HML, QMJ, MOM, & BAB factors. Please note, the monthly returns for both stocks are the total returns and not excess returns.
+
+Date: Monthly dates from 1/31/2007 - 6/30/2018 
+SMB: (small minus big) The monthly return factor attributed to the size factor 
+HML: (high minus low) The monthly return factor attributed to the value factor 
+QMJ: (quality minus junk) The monthly return factor attributed to the profitability factor 
+BAB: (betting against beta) The monthly return factor attributed to the betting against beta factor 
+MOM: The monthly return factor attributed to the momentum factor 
+RF: The monthly risk-free rate  
+MKT: The monthly return of the broad market (S&P 500 index) 
+Mkt_RF: The monthly return factor of the market minus the monthly risk-free rate 
+NVDA: The monthly return for Nvidia Stock 
+INTC: The monthly return for Intel Stock 
+Note: Assume a coefficient significance threshold of a = .1  
+
+```{r}
+data2 <- read.csv("Final_Exam_Factors.csv ",stringsAsFactors = FALSE)   
+head(data2)
+tail(data2)
+```
+```{r}
+NVDAmodel = lm(NVDA ~ MKT_RF+SMB+HML+QMJ+MOM+BAB, data=data2)
+INTCmodel = lm(INTC ~ MKT_RF+SMB+HML+QMJ+MOM+BAB, data=data2)
+
+summary(NVDAmodel)
+summary(INTCmodel)
+```
+
+#  Quesions 23-27
+The dataset store_sales.csvLinks to an external site. is a subset of data from 2010 to 2012 from a US based retailer. It represents weekly sales. Each row is a different week of data for a given store and department for the included time frame.
+Notes: The dataset includes periods from 2010 to 2012, but it does not include every week. Do NOT extrapolate to fill in these missing pieces unless specifically instructed as it will change the answer. We will assume we are using a full dataset for most of the questions.
+
+store = store location id
+dept = store department id
+date = first day of given week (string format you will need to parse it)
+weekly_sales = sales for that week, dept, store
+isholiday = true if it is holiday week
+
+```{r}
+library(dplyr)
+library(xts)
+library(forecast)
+library(lubridate)
+
+data <- read.csv('store_sales_final.csv',stringsAsFactors=FALSE)
+names(data) <- tolower(names(data))
+```
+
+# Question 23
+What is the average value of weekly_sales for dept 1 when there is no holiday? Round to the nearest dollar. 
+
+```{r}
+dept1 = data[data$dept==1,]
+average_weekly_sales <- mean(dept1[dept1$isholiday==FALSE,]$weekly_sales)
+round(average_weekly_sales)
+
+```
+# Question 24
+Create a time-series dataset by computing the total weekly_sales (sum across all departments) per week for store 1, do not exclude holidays. With this data set which we will refer to as "Store 1 weekly sales", use an alpha of 0.25 and h = 100, and the ses() function from the 'forecast' package to fit an exponential smoothing model on the data. Do not separate train/test sets or holdout any points, instead fit the model on the full period of the "Store 1 weekly sales" dataset. Calculate and report the tracking signal based on the actual vs. fitted values and report it rounded to 2 decimal places.
+
+```{r}
+myAlpha = 0.25
+myH = 100 
+
+store_1_weekly <- data %>%  
+group_by(store, date) %>%  
+filter(store==1) %>%  
+summarise(total_sales = sum(weekly_sales)) 
+# data3
+
+store_1_weekly$date <- parse_date_time(store_1_weekly$date, c('%m%d%y', '%m%d%Y')) 
+actual_store1 <- xts(store_1_weekly[, -1:-2], order.by=as.Date(store_1_weekly$date)) 
+forecast25 <- ses(actual_store1, alpha = myAlpha, h=myH) 
+
+```
+```{r}
+tracking_signal <- function(forecasted_values, actual_values) {
+  errors <- forecasted_values - actual_values
+  MAD <- mean(abs(errors))
+  tracking_signal_value <- sum(errors) / MAD
+  return(tracking_signal_value)
+}
+
+ts_25 = tracking_signal(forecast25, actual_store1)
+ts_25
+
+```
+
