@@ -163,16 +163,17 @@ library(dplyr)
 library(xts)
 library(forecast)
 library(lubridate)
+library(ggplot2)
 
-data <- read.csv('store_sales_final.csv',stringsAsFactors=FALSE)
-names(data) <- tolower(names(data))
+data23 <- read.csv('store_sales_final.csv',stringsAsFactors=FALSE)
+names(data23) <- tolower(names(data23))
 ```
 
 # Question 23
 What is the average value of weekly_sales for dept 1 when there is no holiday? Round to the nearest dollar. 
 
 ```{r}
-dept1 = data[data$dept==1,]
+dept1 = data[data23$dept==1,]
 average_weekly_sales <- mean(dept1[dept1$isholiday==FALSE,]$weekly_sales)
 round(average_weekly_sales)
 
@@ -184,11 +185,10 @@ Create a time-series dataset by computing the total weekly_sales (sum across all
 myAlpha = 0.25
 myH = 100 
 
-store_1_weekly <- data %>%  
+store_1_weekly <- data23 %>%  
 group_by(store, date) %>%  
 filter(store==1) %>%  
 summarise(total_sales = sum(weekly_sales)) 
-# data3
 
 store_1_weekly$date <- parse_date_time(store_1_weekly$date, c('%m%d%y', '%m%d%Y')) 
 actual_store1 <- xts(store_1_weekly[, -1:-2], order.by=as.Date(store_1_weekly$date)) 
@@ -196,15 +196,64 @@ forecast25 <- ses(actual_store1, alpha = myAlpha, h=myH)
 
 ```
 ```{r}
-tracking_signal <- function(forecasted_values, actual_values) {
-  errors <- forecasted_values - actual_values
+TSE_MFE_MAD <- function(forecasted_values, actual_values) {
+  errors <- actual_values - forecasted_values
   MAD <- mean(abs(errors))
+  MFE = mean(errors)
   tracking_signal_value <- sum(errors) / MAD
-  return(tracking_signal_value)
+  return(c(tracking_signal_value, MFE, MAD))
 }
 
-ts_25 = tracking_signal(forecast25, actual_store1)
-ts_25
+ts_25 = TSE_MFE_MAD(forecast25$fitted, actual_store1)
+round(ts_25,2)
 
+```
+
+# Question 25
+Using the same time series dataset "Store 1 weekly sales" used in the prior question, calculate the root mean squared error (RMSE) for alpha values ranging from 0.01 to 0.99 with a step increment of 0.01, using h=100. Determine the optimal alpha value that results in the lowest RMSE. Round this optimal alpha value to 2 decimal places and report it.
+
+```{r}
+alphas = seq(.01,.99,.01)
+RMSE = list()
+
+for(i in alphas){
+  modeli = ses(actual_store1, alpha=i, h=100)
+  RMSEi = sqrt(modeli$model$mse)
+  RMSE = append(RMSE, RMSEi)
+}
+
+RMSE = unlist(RMSE)
+alpha_min = alphas[which.min(RMSE)]
+RMSE_min = min(RMSE)
+new_point = data.frame(alpha=alpha_min, RMSE=RMSE_min)
+new_point
+# ggplot(mapping = aes(x = alphas, y = RMSE)) +
+#   geom_line() +
+#   geom_point(data = new_point, aes(x = alpha, y = RMSE), color = 'red', size = 3) +
+#   geom_text(data = new_point, aes(x = alpha, y = RMSE, label = paste("(",(alpha_min),",", round(RMSE_min),")")
+# ), color="red",vjust = -1.5, hjust = 0.2, size = 4) +
+#   labs(x = "Alpha", y = "RMSE", title = "RMSE vs. Alpha for SES")
+```
+
+# Question 26
+Using the calculated values for the Tracking Signal, MAD, and MFE for the alpha values of 0.25 and 0.75, (computed in the previous question) compare these two models and select the TRUE statement below:
+
+```{r}
+forecast75 <- ses(actual_store1, alpha = 0.75, h=myH) 
+
+print('alpha=75')
+round(TSE_MFE_MAD(forecast75$fitted, actual_store1),2)
+print('alpha=25')
+round(TSE_MFE_MAD(forecast25$fitted, actual_store1),2)
+
+```
+
+# Question 27
+Using the "Store 1 weekly sales" dataset we created previously, fit an exponential smoothing model using the ses() function from the 'forecast' package. Fit the model to the entire dataset do not apply any train/test splits. Use an alpha of 0.5 and h = 100 as parameters, and plot the model. What do you observe in the graph? Select the statement below which best matches your observations.
+
+```{r}
+
+forecast50 <-ses(actual_store1, alpha=0.5, h=100)
+autoplot(forecast50)
 ```
 
